@@ -1,0 +1,4 @@
+<plugin>
+  <name>parsermacro-plugin</name>
+  <classname>org.duhemm.parsermacro.Plugin</classname>
+</plugin>
