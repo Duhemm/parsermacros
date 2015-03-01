@@ -1,10 +1,17 @@
 package org.duhemm.parsermacro
 
+import scala.reflect.macros.util.Traces
+import scala.reflect.internal.util.ScalaClassLoader
+import scala.reflect.runtime.ReflectionUtils
 import scala.reflect.internal.Mode
 
-trait AnalyzerPlugins { self: Plugin =>
+trait AnalyzerPlugins extends Traces { self: Plugin =>
   import global._
   import analyzer._
+  import definitions._
+  import treeInfo._
+
+  def globalSettings = global.settings
 
   object MacroPlugin extends analyzer.MacroPlugin {
     /**
@@ -19,10 +26,14 @@ trait AnalyzerPlugins { self: Plugin =>
      * $nonCumulativeReturnValueDoc.
      */
     override def pluginsTypedMacroBody(typer: Typer, ddef: DefDef): Option[Tree] = {
-      val DefDef(mods, name, tparams, vparamss, tpt, rhs) = ddef
-
-      if(name.toString == "bar") Some(tpt)
-      else None
+      try {
+        verifyMacroShape(typer, ddef)
+        Some(EmptyTree)
+      } catch {
+        case InvalidMacroShapeException(pos, msg) =>
+          macroLogVerbose(s"parser macro $ddef.name has an invalid shape:\n$msg")
+          None
+      }
     }
 
     /**
@@ -54,28 +65,30 @@ trait AnalyzerPlugins { self: Plugin =>
      */
     override def pluginsMacroExpand(typer: Typer, expandee: Tree, mode: Mode, pt: Type): Option[Tree] = {
 
-        if(expandee.toString == "Macros.bar") {
-          val args = macroArgs(typer, expandee)
-          val runtime = macroRuntime(expandee)
-          val result = runtime(args)
+      expandee match {
+        case ParserMacroApplication(app, rawArguments, _) =>
+          val arguments = macroArgs(typer, app)
+          val runtime = macroRuntime(app)
+          val originalExpandee = app + rawArguments.mkString("#(", ")#(", ")")
 
-          println("-" * 211)
-          println(s"$expandee expanded to:")
-          result match {
-            case tree: scala.meta.Tree =>
+          runtime(arguments) match {
+            case expanded: scala.meta.Tree =>
               import scala.meta.dialects.Scala211
               import scala.meta.ui._
-              println("Code: " + tree.show[Code])
-              println("Raw : " + tree.show[Raw])
 
-            case other =>
-              println(other)
-              throw new Exception(s"Macro expansion should be an instance of scala.meta.Tree, found ${other.getClass.getName}.")
+              println(s"$originalExpandee expanded to:")
+              println(s"code: ${expanded.show[Code]}")
+              println(s"raw : ${expanded.show[Raw]}")
+
+              // TODO: Convert `expanded` to scala.reflect tree
+              Some(typer.typed(Literal(Constant(12))))
+
+            case _ =>
+              None
           }
-          println("-" * 211)
-          Some(typer.typed(Literal(Constant(12))))
-        }
-        else None
+
+        case _ => None
+      }
     }
 
     /**
@@ -88,29 +101,15 @@ trait AnalyzerPlugins { self: Plugin =>
      */
     override def pluginsMacroArgs(typer: Typer, expandee: Tree): Option[MacroArgs] = {
       import scala.meta.dialects.Scala211
-      import scala.meta.syntactic.tokenizers
-      import scala.meta.Origin
-      val args = expandee.attachments.get[List[String]]
+      import scala.meta.Origin.String.{ apply => string2origin }
+      import scala.meta.syntactic.tokenizers.tokenize.{ apply => tokenize }
 
-      if(args.isEmpty) {
-        None
-      } else {
-        val args = expandee.attachments.get[List[String]].head
-        val origins = args.map(a => Origin.String(a))
-        val a2 = origins.map(origin => tokenizers.tokenize(origin))
-        val a3 = MacroArgs(context(typer, null, expandee), a2)
-        Some(a3)
-      }
-    }
+      expandee match {
+        case ParserMacroApplication(_, rawArguments, _) =>
+          val tokenized = rawArguments map string2origin map tokenize
+          Some(ContextFreeMacroArgs(tokenized))
 
-    private def context(typer: Typer, prefixTree: Tree, expandeeTree: Tree) = {
-      new {
-        val universe: self.global.type = self.global
-        val callsiteTyper: universe.analyzer.Typer = typer.asInstanceOf[global.analyzer.Typer]
-        val expandee = universe.analyzer.macroExpanderAttachment(expandeeTree).original orElse duplicateAndKeepPositions(expandeeTree)
-      } with UnaffiliatedMacroContext {
-        val prefix = Expr[Nothing](prefixTree)(TypeTag.Nothing)
-        override def toString = "MacroContext(%s@%s +%d)".format(expandee.symbol.name, expandee.pos, enclosingMacros.length - 1 /* exclude myself */)
+        case _ => None
       }
     }
 
@@ -125,22 +124,20 @@ trait AnalyzerPlugins { self: Plugin =>
      * $nonCumulativeReturnValueDoc.
      */
     override def pluginsMacroRuntime(expandee: Tree): Option[MacroRuntime] = {
-      val args = expandee.attachments.get[List[String]]
-      if(args.isEmpty) {
-        None
-      } else {
-        import scala.meta.syntactic.tokenizers.Token
-        val method = expandee.symbol
-        val owner = method.owner
+      expandee match {
+        case ParserMacroApplication(_, _, MacroImplBinding(false, true, className, methName, signature, targs)) =>
 
-        val classpath = global.classPath.asURLs
-        val classloader = scala.reflect.internal.util.ScalaClassLoader.fromURLs(classpath, self.getClass.getClassLoader)
+          val classpath = global.classPath.asURLs
+          val classloader = ScalaClassLoader.fromURLs(classpath, self.getClass.getClassLoader)
+          val implClass = Class.forName(className, true, classloader)
 
-        val implClass = Class.forName(owner.fullName, true, classloader)
-        val implMethod = implClass.getMethods.find(_.getName == "foo").get
+          implClass.getMethods find (_.getName == methName) map { implMethod =>
+            val implInstance = ReflectionUtils.staticSingletonInstance(classloader, className)
+            (x: MacroArgs) => implMethod.invoke(implInstance, x.others)
+          }
 
-        val fun = (x: MacroArgs) => implMethod.invoke(implClass, x.others)
-        Some(fun)
+        case _ =>
+          None
       }
     }
 
@@ -178,6 +175,55 @@ trait AnalyzerPlugins { self: Plugin =>
      * to be treated uniformly, so I'm leaving this for future work.
      */
     override def pluginsEnterStats(typer: Typer, stats: List[Tree]): List[Tree] = stats
+
+    private object ParserMacroApplication {
+      def unapply(tree: Tree) = {
+
+        val binding = tree.symbol.getAnnotation(MacroImplAnnotation) collect {
+          case AnnotationInfo(_, List(pickle), _) => MacroImplBinding.unpickle(pickle)
+        }
+
+        (tree.attachments.get[List[String]].toList, binding) match {
+          case (arguments :: Nil, Some(binding)) =>
+
+            Some((tree, arguments, binding))
+          case _ => None
+        }
+      }
+    }
+
+    private def verifyMacroShape(typer: Typer, ddef: DefDef): Unit = {
+
+      val DefDef(mods, name, tparams, vparamss, tpt, rhs) = ddef
+
+      // The rhs of `ddef` should be a subtype of `expectedType`
+      val expectedType = typeOf[_root_.scala.collection.Seq[_root_.scala.collection.Seq[_root_.scala.meta.syntactic.tokenizers.Token]] => _root_.scala.meta.Tree]
+
+      typer.silent(_.typed(markMacroImplRef(rhs.duplicate), expectedType)) match {
+        case SilentResultValue(select: Select) =>
+          bindMacroImpl(ddef.symbol, select)
+
+        case SilentResultValue(res) =>
+          throw InvalidMacroShapeException(ddef.pos, "...")
+
+        case SilentTypeError(err) =>
+          throw InvalidMacroShapeException(err.errPos, err.errMsg)
+      }
+
+      // TODO: Many more checks
+
+    }
+
+    private class ContextFreeMacroArgs(args: List[Any]) extends MacroArgs(null, args)
+    private object ContextFreeMacroArgs {
+      def apply(args: List[Any]) = new ContextFreeMacroArgs(args)
+      def unapply(args: MacroArgs) = {
+        if (args.c == null) Some(args.others)
+        else None
+      }
+    }
+
+    private case class InvalidMacroShapeException(pos: Position, msg: String) extends Exception(msg + " / " + pos.getClass.getName)
 
   }
 }

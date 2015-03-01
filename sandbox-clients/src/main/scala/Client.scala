@@ -1,5 +1,10 @@
 object Client extends App {
-  val length = Macros.bar#(lel mdr hahah "bonjour")
+  Macros.iterate#(for x in 1 .. 10 {
+    println{ x }
+  })
 
-  assert(length == 8)
+  Macros.miniMacro#()
+
+  println("Hello, world!")
+
 }
