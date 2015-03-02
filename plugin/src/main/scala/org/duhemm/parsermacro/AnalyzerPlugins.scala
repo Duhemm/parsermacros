@@ -183,8 +183,8 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
           case AnnotationInfo(_, List(pickle), _) => MacroImplBinding.unpickle(pickle)
         }
 
-        (tree.attachments.get[List[String]].toList, binding) match {
-          case (arguments :: Nil, Some(binding)) =>
+        (tree.attachments.get[ParserMacroArgumentsAttachment].toList, binding) match {
+          case (ParserMacroArgumentsAttachment(arguments) :: Nil, Some(binding)) =>
 
             Some((tree, arguments, binding))
           case _ => None

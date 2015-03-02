@@ -49,7 +49,8 @@ lazy val sandboxMacros: Project =
   (project in file("sandbox-macros")) settings (
     sharedSettings ++ usePluginSettings: _*
   ) settings (
-    publishArtifact in Compile := false
+    publishArtifact in Compile := false,
+    scalacOptions ++= Seq()
   )
 
 lazy val sandboxClients =
@@ -58,6 +59,7 @@ lazy val sandboxClients =
   ) settings (
     // Always clean before running compile in this subproject
     compile <<= (compile in Compile) dependsOn (verifyScalaHome, clean),
+    scalacOptions ++= Seq("-Ymacro-debug-verbose"),
     verifyScalaHome := {
       if((System getProperty scalaHomeProperty) == null) {
         val log = streams.value.log
@@ -73,6 +75,11 @@ lazy val tests =
   (project in file("tests")) settings (
     sharedSettings ++ usePluginSettings: _*
   ) settings (
+    libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _),
     libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test",
-    libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.12.2" % "test"
-  )
+    libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.12.2" % "test",
+    compile in Test := {
+      sys.props("sbt.class.directory") = (classDirectory in Test).value.getAbsolutePath
+      (compile in Test).value
+    }
+  ) dependsOn plugin
