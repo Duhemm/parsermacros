@@ -76,12 +76,7 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
               import scala.meta.dialects.Scala211
               import scala.meta.ui._
 
-              println(s"$originalExpandee expanded to:")
-              println(s"code: ${expanded.show[Code]}")
-              println(s"raw : ${expanded.show[Raw]}")
-
-              // TODO: Convert `expanded` to scala.reflect tree
-              Some(typer.typed(Literal(Constant(12))))
+              Some(typer.typed(arguments.c.parse(expanded.toString)))
 
             case _ =>
               None
@@ -105,9 +100,11 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
       import scala.meta.syntactic.tokenizers.tokenize.{ apply => tokenize }
 
       expandee match {
-        case ParserMacroApplication(_, rawArguments, _) =>
+        case ParserMacroApplication(treeInfo.Applied(core, _, _), rawArguments, _) =>
+          val prefix = core match { case Select(qual, _) => qual ; case _ => EmptyTree }
+          val context = macroContext(typer, prefix, expandee)
           val tokenized = rawArguments map string2origin map tokenize
-          Some(ContextFreeMacroArgs(tokenized))
+          Some(MacroArgs(context, tokenized))
 
         case _ => None
       }
@@ -212,15 +209,6 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
 
       // TODO: Many more checks
 
-    }
-
-    private class ContextFreeMacroArgs(args: List[Any]) extends MacroArgs(null, args)
-    private object ContextFreeMacroArgs {
-      def apply(args: List[Any]) = new ContextFreeMacroArgs(args)
-      def unapply(args: MacroArgs) = {
-        if (args.c == null) Some(args.others)
-        else None
-      }
     }
 
     private case class InvalidMacroShapeException(pos: Position, msg: String) extends Exception(msg + " / " + pos.getClass.getName)
