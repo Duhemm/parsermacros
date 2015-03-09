@@ -76,7 +76,7 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
               import scala.meta.dialects.Scala211
               import scala.meta.ui._
 
-              Some(typer.typed(arguments.c.parse(expanded.toString)))
+              Some(typer.typed(arguments.c.parse(expanded.toString), pt))
 
             case _ =>
               None
@@ -182,8 +182,8 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
 
         (tree.attachments.get[ParserMacroArgumentsAttachment].toList, binding) match {
           case (ParserMacroArgumentsAttachment(arguments) :: Nil, Some(binding)) =>
-
             Some((tree, arguments, binding))
+
           case _ => None
         }
       }
