@@ -13,7 +13,3 @@ $ sbt -Dmacroparser.scala.home="[path where you built scala]"
 ```
 
 You can place your macro implementations in `sandbox-macros/` and your macro clients in `sandbox-clients/`.
-
-Note that as the time of writing, your macro should be named `Macros.bar`.
-
-The plugin will show you the expansion of the macro. However, this is not the tree that will be spliced in your macro client.
