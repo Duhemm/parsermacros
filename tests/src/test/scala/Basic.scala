@@ -11,9 +11,9 @@ class BasicSuite extends FunSuite {
   // matches what we expect...
 
   test("Simple expansion") {
-    val code = "macros.Macros.count#(hello world)"
+    val code = "macros.Macros.countTokens#(hello world)"
     val expansion = compile(code).toString
-    val expected = "4"
+    val expected = "5" // BOF, "hello", ` `, "world", EOF
     assert(expected == expansion,
       s"""\nExpected : $expected
            |Expansion: $expansion""".stripMargin)

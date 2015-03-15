@@ -96,14 +96,13 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
      */
     override def pluginsMacroArgs(typer: Typer, expandee: Tree): Option[MacroArgs] = {
       import scala.meta.dialects.Scala211
-      import scala.meta.Origin.String.{ apply => string2origin }
-      import scala.meta.syntactic.tokenizers.tokenize.{ apply => tokenize }
+      import scala.meta.Input.String.{ apply => string2input }
 
       expandee match {
         case ParserMacroApplication(treeInfo.Applied(core, _, _), rawArguments, _) =>
           val prefix = core match { case Select(qual, _) => qual ; case _ => EmptyTree }
           val context = macroContext(typer, prefix, expandee)
-          val tokenized = rawArguments map string2origin map tokenize
+          val tokenized = rawArguments map string2input map (_.tokens)
           Some(MacroArgs(context, tokenized))
 
         case _ => None
@@ -194,7 +193,7 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
       val DefDef(mods, name, tparams, vparamss, tpt, rhs) = ddef
 
       // The rhs of `ddef` should be a subtype of `expectedType`
-      val expectedType = typeOf[_root_.scala.collection.Seq[_root_.scala.collection.Seq[_root_.scala.meta.syntactic.tokenizers.Token]] => _root_.scala.meta.Tree]
+      val expectedType = typeOf[_root_.scala.collection.Seq[_root_.scala.collection.Seq[_root_.scala.meta.syntactic.Token]] => _root_.scala.meta.Tree]
 
       typer.silent(_.typed(markMacroImplRef(rhs.duplicate), expectedType)) match {
         case SilentResultValue(select: Select) =>

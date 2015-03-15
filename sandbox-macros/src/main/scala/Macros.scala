@@ -1,8 +1,7 @@
 import scala.meta._
+import scala.meta.Token._
 import scala.meta.dialects.Scala211
 import scala.meta.internal.ast
-import scala.meta.syntactic.tokenizers.Token
-import scala.meta.syntactic.tokenizers.Token._
 import scala.language.experimental.macros
 
 object A {
@@ -17,8 +16,8 @@ object Macros {
     val toks = tokens.head.filterNot(_.isInstanceOf[Whitespace]).toList
 
     val res = toks match {
-      // for ident in intlit .. intlit { ident { ident } }
-      case `for`(_, _) :: (iteratee: Ident) :: (in: Ident) :: (from: Literal.Int) :: `.`(_, _) :: `.`(_, _) :: (to: Literal.Int) :: `{`(_, _) :: (pln: Ident) :: `{`(_, _) :: (_: Ident) :: `}`(_, _) :: `}`(_, _) :: rest =>
+      // BOF for ident in intlit .. intlit { ident { ident } } EOF
+      case (_: BOF) :: (_: `for`) :: (iteratee: Ident) :: (in: Ident) :: (from: Literal.Int) :: (_: `.`) :: (_: `.`) :: (to: Literal.Int) :: (_: `{`) :: (pln: Ident) :: (_: `{`) :: (_: Ident) :: (_: `}`) :: (_: `}`) :: (_: EOF) :: Nil =>
         val in = ast.Term.Name(iteratee.code)
         val operation = ast.Term.Name(pln.code)
         val frm = ast.Lit.Int(from.code.toInt)

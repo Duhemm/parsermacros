@@ -9,5 +9,5 @@ object Macros {
     res
   }
 
-  def count: Int = macro impl
+  def countTokens: Int = macro impl
 }
