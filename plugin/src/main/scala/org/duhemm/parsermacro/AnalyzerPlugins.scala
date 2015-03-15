@@ -4,6 +4,8 @@ import scala.reflect.macros.util.Traces
 import scala.reflect.internal.util.ScalaClassLoader
 import scala.reflect.runtime.ReflectionUtils
 import scala.reflect.internal.Mode
+import scala.reflect.internal.Flags
+import scala.reflect.internal.Flags._
 
 trait AnalyzerPlugins extends Traces { self: Plugin =>
   import global._
@@ -27,11 +29,17 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
      */
     override def pluginsTypedMacroBody(typer: Typer, ddef: DefDef): Option[Tree] = {
       try {
-        verifyMacroShape(typer, ddef)
-        Some(EmptyTree)
+        verifyMacroShape(typer, ddef) match {
+          case Some(select) =>
+            Some(EmptyTree)
+
+          case None =>
+            None
+        }
       } catch {
         case InvalidMacroShapeException(pos, msg) =>
           macroLogVerbose(s"parser macro $ddef.name has an invalid shape:\n$msg")
+          typer.context.error(pos, msg)
           None
       }
     }
@@ -188,7 +196,7 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
       }
     }
 
-    private def verifyMacroShape(typer: Typer, ddef: DefDef): Unit = {
+    private def verifyMacroShape(typer: Typer, ddef: DefDef): Option[Select] = {
 
       val DefDef(mods, name, tparams, vparamss, tpt, rhs) = ddef
 
@@ -197,20 +205,34 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
 
       typer.silent(_.typed(markMacroImplRef(rhs.duplicate), expectedType)) match {
         case SilentResultValue(select: Select) =>
+
+          if (!isJavaPublic(select.symbol)) {
+            throw InvalidMacroShapeException(rhs.pos, "macro implementation must be public")
+          }
+
+          if(!select.symbol.owner.isModuleClass) {
+            throw InvalidMacroShapeException(rhs.pos,
+              """macro implementation reference has wrong shape. Required:
+                |macro [<static object>].<method name>""")
+          }
+
           bindMacroImpl(ddef.symbol, select)
+          Some(select)
 
         case SilentResultValue(res) =>
-          throw InvalidMacroShapeException(ddef.pos, "...")
+          None
 
         case SilentTypeError(err) =>
           throw InvalidMacroShapeException(err.errPos, err.errMsg)
       }
 
-      // TODO: Many more checks
-
     }
 
-    private case class InvalidMacroShapeException(pos: Position, msg: String) extends Exception(msg + " / " + pos.getClass.getName)
+    private def isJavaPublic(symbol: Symbol): Boolean = {
+      !symbol.hasFlag(PRIVATE | PROTECTED) && !symbol.hasAccessBoundary
+    }
+
+    private case class InvalidMacroShapeException(pos: Position, msg: String) extends Exception(msg)
 
   }
 }

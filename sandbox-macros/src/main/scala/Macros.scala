@@ -32,7 +32,7 @@ object Macros {
 
   }
   def iterate: Unit = macro localMacroDef
-  def miniMacro: String = macro A.Nested.miniMacro
+  def miniMacro: Int = macro A.Nested.miniMacro
 
 
   // Classic scala.reflect macro to make sure the plugin just ignores it.
