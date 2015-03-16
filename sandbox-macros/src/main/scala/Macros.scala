@@ -12,6 +12,27 @@ object A {
 
 object Macros {
 
+  def For: Unit = macro forImpl
+  def forImpl(it: Seq[Token], body: Seq[Token]): Tree = {
+
+    val cleanIt = it.filterNot(_.isInstanceOf[Whitespace]).toList
+    val cleanBody = body.filterNot(_.isInstanceOf[Whitespace]).toList
+
+    val iteratee = cleanIt match {
+      case (_: BOF) :: (variable: Ident) :: (_: Ident) :: (from: Literal.Int) :: (_: `.`) :: (_: `.`) :: (to: Literal.Int) :: (_: EOF) :: Nil =>
+        val frm = ast.Lit.Int(from.code.toInt)
+        val t = ast.Lit.Int(to.code.toInt)
+        val in = ast.Term.Name(variable.code)
+        (body: Term) => q"for($in <- Range($frm, $t)) { $body }"
+      case _ =>
+        ???
+    }
+
+    val bdy = Parse.parseTerm(Scala211)(Input.Tokens(body.toVector))
+
+    iteratee(bdy)
+  }
+
   def localMacroDef(tokens: Seq[Seq[Token]]): Tree = {
     val toks = tokens.head.filterNot(_.isInstanceOf[Whitespace]).toList
 

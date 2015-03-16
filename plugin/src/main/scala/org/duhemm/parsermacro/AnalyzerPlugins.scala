@@ -137,7 +137,7 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
 
           implClass.getMethods find (_.getName == methName) map { implMethod =>
             val implInstance = ReflectionUtils.staticSingletonInstance(classloader, className)
-            (x: MacroArgs) => implMethod.invoke(implInstance, x.others)
+            (x: MacroArgs) => implMethod.invoke(implInstance, x.others.asInstanceOf[Seq[AnyRef]]: _*)
           }
 
         case _ =>
@@ -203,6 +203,8 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
       // The rhs of `ddef` should be a subtype of `expectedType`
       val expectedType = typeOf[_root_.scala.collection.Seq[_root_.scala.collection.Seq[_root_.scala.meta.syntactic.Token]] => _root_.scala.meta.Tree]
 
+      // Turns out this doesn't check anything.
+      // TODO: Fix this test
       typer.silent(_.typed(markMacroImplRef(rhs.duplicate), expectedType)) match {
         case SilentResultValue(select: Select) =>
 

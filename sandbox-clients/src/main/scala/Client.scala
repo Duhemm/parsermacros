@@ -1,9 +1,8 @@
 object Client extends App {
-  Macros.iterate#(for x in 1 .. 10 {
-    println{ x }
-  })
 
-  Macros.miniMacro#()
+  Macros.For#(x in 1 .. 10)#{
+    println(x)
+  }
 
   println("Hello, world!")
 
