@@ -4,7 +4,7 @@ val scalaHomeProperty = "macroparser.scala.home"
 
 lazy val sharedSettings: Seq[Setting[_]] = Seq(
   version := "0.1.0-SNAPSHOT",
-  scalaVersion := "2.11.5",
+  scalaVersion := "2.11.6",
   resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
   libraryDependencies += "org.scalameta" %% "scalameta" % "0.1.0-SNAPSHOT",
   libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
