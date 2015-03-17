@@ -11,8 +11,14 @@ abstract class MacroParserSuite extends FunSuite {
   def hasError(tree: tb.u.Tree): Boolean =
     tree.toString.contains(": error>") // TODO: Improve this
 
-  implicit class ShouldExpandTo(code: String) {
+  implicit class CompileAndCheck(code: String) {
 
+    /**
+     * Verifies that `code` actually expands to `expected`
+     * during compilation.
+     * The expansion is simply converted to a string that is
+     * then compared to `expected`.
+     */
     def shouldExpandTo(expected: String): Unit = {
       val expansion = compile(code).toString
       assert(expected == expansion,
@@ -20,15 +26,23 @@ abstract class MacroParserSuite extends FunSuite {
            |Expansion: $expansion""".stripMargin)
     }
 
+    /**
+     * Verifies that `code` contains an error after compilation,
+     * according to `hasError`.
+     */
     def shouldNotBeConsideredAParserMacro: Unit = {
       val expansion = compile(code)
       assert(hasError(expansion))
     }
 
+    /**
+     * Verifies that an error is detected during the compilation
+     * of `code`, and that the error message contains `expected`.
+     */
     def shouldFailWith(expected: String): Unit = {
       try {
         compile(code)
-        fail()
+        fail("An error was expected during the compilation, but none was issued.")
       } catch {
         case err @ ToolBoxError(msg, _) =>
           assert(msg contains expected)

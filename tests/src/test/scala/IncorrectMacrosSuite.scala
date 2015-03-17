@@ -1,27 +1,9 @@
-import compiler.Compiler._
-import org.scalatest.FunSuite
-
-import scala.tools.reflect.{ ToolBoxError => CompilationFailure }
-
-import scala.meta._
-import scala.meta.dialects.Scala211
-
-class BasicSuite extends MacroParserSuite {
-
-  test("Simple expansion") {
-    // We are actually giving 5 tokens to the parser macro: `BOF`, "hello", ` `, "world", `EOF`
-    "macros.Macros.countTokens#(hello world)" shouldExpandTo "5"
-  }
-
-  test("Expand multi parameter parser macro") {
-    // This macro always returns 1
-    "macros.Macros.alwaysReturnOne#(hello)#(world)" shouldExpandTo "1"
-  }
-
-  test("Vanilla macros should still work") {
-    // This macro always returns 1
-    "macros.VanillaMacros.vanilla" shouldExpandTo "(1: Int)"
-  }
+/**
+ * These tests verify that all the constraints on macro implementations are
+ * respected, and that the plugin behaves correctly in unexpected situations
+ * (for instance when a parser macro is not given enough arguments).
+ */
+class IncorrectMacrosSuite extends MacroParserSuite {
 
   test("Expansion should match the expected type") {
     // This macro returns an Int, we are assigning it to a Boolean variable
@@ -66,16 +48,6 @@ class BasicSuite extends MacroParserSuite {
       |}""".stripMargin.shouldNotBeConsideredAParserMacro
   }
 
-  test("Accept a macro whose parameters are a supertype of `Seq[Token]`") {
-    // This macro always return 1
-    "macros.Macros.compatibleParameterType#(hello)" shouldExpandTo "1"
-  }
-
-  test("Accept a macro whose return type is a subtype of `Tree`") {
-    // This macro always return 1
-    "macros.Macros.compatibleReturnType#(hello)" shouldExpandTo "1"
-  }
-
   test("Reject a macro whose return type is incompatible with parser macros") {
     """object Incorrect {
       |  def hello: Int = macro macros.Macros.incompatibleReturnType
@@ -85,5 +57,10 @@ class BasicSuite extends MacroParserSuite {
   test("Fail on multi parameter macros when not enough arguments are given") {
     // This macro normally takes 2 arguments
     "macros.Macros.alwaysReturnOne#(hello)" shouldFailWith "parser macro expected 2 but got 1 argument"
+  }
+
+  test("Fail on multi parameter macros when too many arguments are given") {
+    // This macro normally takes 2 arguments
+    "macros.Macros.alwaysReturnOne#(hello)#(world)#(!)" shouldFailWith "parser macro expected 2 but got 3 arguments"
   }
 }
