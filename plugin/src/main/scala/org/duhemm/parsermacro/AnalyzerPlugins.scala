@@ -7,7 +7,7 @@ import scala.reflect.internal.Mode
 import scala.reflect.internal.Flags
 import scala.reflect.internal.Flags._
 
-trait AnalyzerPlugins extends Traces { self: Plugin =>
+trait AnalyzerPlugins extends Traces with Exceptions { self: Plugin =>
   import global._
   import analyzer._
   import definitions._
@@ -29,13 +29,7 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
      */
     override def pluginsTypedMacroBody(typer: Typer, ddef: DefDef): Option[Tree] = {
       try {
-        verifyMacroShape(typer, ddef) match {
-          case Some(select) =>
-            Some(EmptyTree)
-
-          case None =>
-            None
-        }
+        verifyMacroShape(typer, ddef) map (_ => EmptyTree)
       } catch {
         case InvalidMacroShapeException(pos, msg) =>
           macroLogVerbose(s"parser macro $ddef.name has an invalid shape:\n$msg")
@@ -79,14 +73,20 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
           val runtime = macroRuntime(app)
           val originalExpandee = app + rawArguments.mkString("#(", ")#(", ")")
 
-          runtime(arguments) match {
-            case expanded: scala.meta.Tree =>
-              import scala.meta.dialects.Scala211
-              import scala.meta.ui._
+          try {
+            runtime(arguments) match {
+              case expanded: scala.meta.Tree =>
+                import scala.meta.dialects.Scala211
+                import scala.meta.ui._
 
-              Some(typer.typed(arguments.c.parse(expanded.toString), pt))
+                Some(typer.typed(arguments.c.parse(expanded.toString), pt))
 
-            case _ =>
+              case _ =>
+                None
+            }
+          } catch {
+            case InvalidMacroInvocationException(msg) =>
+              typer.context.error(expandee.pos, msg)
               None
           }
 
@@ -137,7 +137,14 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
 
           implClass.getMethods find (_.getName == methName) map { implMethod =>
             val implInstance = ReflectionUtils.staticSingletonInstance(classloader, className)
-            (x: MacroArgs) => implMethod.invoke(implInstance, x.others.asInstanceOf[Seq[AnyRef]]: _*)
+            (x: MacroArgs) => {
+              val arguments = x.others.asInstanceOf[Seq[AnyRef]]
+
+              // Make sure that the parser macro is given exactly as many arguments as it expects
+              if (arguments.length != implMethod.getParameterTypes.length) {
+                throw InvalidMacroInvocationException(s"parser macro expected ${implMethod.getParameterTypes.length} but got ${arguments.length} arguments.")
+              } else implMethod.invoke(implInstance, arguments: _*)
+            }
           }
 
         case _ =>
@@ -198,28 +205,44 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
 
     private def verifyMacroShape(typer: Typer, ddef: DefDef): Option[Select] = {
 
+      def parserMacroCompatibleParameters(params: List[Symbol]): Boolean = {
+        val expectedType = typeOf[_root_.scala.collection.Seq[_root_.scala.meta.syntactic.Token]]
+        params forall (expectedType <:< _.typeSignature)
+      }
+
       val DefDef(mods, name, tparams, vparamss, tpt, rhs) = ddef
 
-      // The rhs of `ddef` should be a subtype of `expectedType`
-      val expectedType = typeOf[_root_.scala.collection.Seq[_root_.scala.collection.Seq[_root_.scala.meta.syntactic.Token]] => _root_.scala.meta.Tree]
-
-      // Turns out this doesn't check anything.
-      // TODO: Fix this test
-      typer.silent(_.typed(markMacroImplRef(rhs.duplicate), expectedType)) match {
+      typer.silent(_.typed(markMacroImplRef(rhs.duplicate))) match {
         case SilentResultValue(select: Select) =>
 
-          if (!isJavaPublic(select.symbol)) {
-            throw InvalidMacroShapeException(rhs.pos, "macro implementation must be public")
-          }
+          val methodSym = select.symbol.asMethod
 
-          if(!select.symbol.owner.isModuleClass) {
-            throw InvalidMacroShapeException(rhs.pos,
-              """macro implementation reference has wrong shape. Required:
-                |macro [<static object>].<method name>""")
-          }
+          methodSym.paramLists match {
+            // Parser macros can have only one parameter list
+            case params :: Nil if parserMacroCompatibleParameters(params) =>
+              if (!(methodSym.returnType <:< typeOf[_root_.scala.meta.Tree])) {
+                throw InvalidMacroShapeException(rhs.pos, "macro implementation must return a value of type scala.meta.Tree")
+              }
 
-          bindMacroImpl(ddef.symbol, select)
-          Some(select)
+              if (!methodSym.owner.isModuleClass) {
+                throw InvalidMacroShapeException(rhs.pos,
+                  """macro implementation reference has wrong shape. Required:
+                    |macro [<static object>].<method name>""")
+              }
+
+              if (!methodSym.isPublic) {
+                throw InvalidMacroShapeException(rhs.pos, "macro implementation must be public")
+              }
+
+              bindMacroImpl(ddef.symbol, select)
+              Some(select)
+
+            case params if params forall parserMacroCompatibleParameters =>
+              throw InvalidMacroShapeException(rhs.pos, "macro parser can have only one parameter list")
+
+            case _ =>
+              None
+          }
 
         case SilentResultValue(res) =>
           None
@@ -229,12 +252,5 @@ trait AnalyzerPlugins extends Traces { self: Plugin =>
       }
 
     }
-
-    private def isJavaPublic(symbol: Symbol): Boolean = {
-      !symbol.hasFlag(PRIVATE | PROTECTED) && !symbol.hasAccessBoundary
-    }
-
-    private case class InvalidMacroShapeException(pos: Position, msg: String) extends Exception(msg)
-
   }
 }

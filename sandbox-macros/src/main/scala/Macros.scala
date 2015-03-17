@@ -6,7 +6,7 @@ import scala.language.experimental.macros
 
 object A {
   object Nested {
-    def miniMacro(tokens: Seq[Seq[Token]]): Tree = ast.Lit.Int(5)
+    def miniMacro(tokens: Seq[Token]): Tree = ast.Lit.Int(5)
   }
 }
 
@@ -33,8 +33,8 @@ object Macros {
     iteratee(bdy)
   }
 
-  def localMacroDef(tokens: Seq[Seq[Token]]): Tree = {
-    val toks = tokens.head.filterNot(_.isInstanceOf[Whitespace]).toList
+  def localMacroDef(tokens: Seq[Token]): Tree = {
+    val toks = tokens.filterNot(_.isInstanceOf[Whitespace]).toList
 
     val res = toks match {
       // BOF for ident in intlit .. intlit { ident { ident } } EOF
