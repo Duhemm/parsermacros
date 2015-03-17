@@ -227,7 +227,7 @@ trait AnalyzerPlugins extends Traces with Exceptions { self: Plugin =>
               if (!methodSym.owner.isModuleClass) {
                 throw InvalidMacroShapeException(rhs.pos,
                   """macro implementation reference has wrong shape. Required:
-                    |macro [<static object>].<method name>""")
+                    |macro [<static object>].<method name>""".stripMargin)
               }
 
               if (!methodSym.isPublic) {
