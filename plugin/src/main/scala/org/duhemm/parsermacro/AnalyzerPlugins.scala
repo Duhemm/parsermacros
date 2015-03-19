@@ -2,6 +2,7 @@ package org.duhemm.parsermacro
 
 import scala.reflect.macros.util.Traces
 import scala.reflect.internal.util.ScalaClassLoader
+import scala.reflect.internal.util.AbstractFileClassLoader
 import scala.reflect.runtime.ReflectionUtils
 import scala.reflect.internal.Mode
 import scala.reflect.internal.Flags
@@ -131,20 +132,37 @@ trait AnalyzerPlugins extends Traces with Exceptions { self: Plugin =>
       expandee match {
         case ParserMacroApplication(_, _, MacroImplBinding(false, true, className, methName, signature, targs)) =>
 
-          val classpath = global.classPath.asURLs
-          val classloader = ScalaClassLoader.fromURLs(classpath, self.getClass.getClassLoader)
-          val implClass = Class.forName(className, true, classloader)
+          def loadImplWithClassLoader(classloader: ScalaClassLoader): Option[MacroRuntime] = {
+            val implClass = Class.forName(className, true, classloader)
 
-          implClass.getMethods find (_.getName == methName) map { implMethod =>
-            val implInstance = ReflectionUtils.staticSingletonInstance(classloader, className)
-            (x: MacroArgs) => {
-              val arguments = x.others.asInstanceOf[Seq[AnyRef]]
+            implClass.getMethods find (_.getName == methName) map { implMethod =>
+              val implInstance = ReflectionUtils.staticSingletonInstance(classloader, className)
+              (x: MacroArgs) => {
+                val arguments = x.others.asInstanceOf[Seq[AnyRef]]
 
-              // Make sure that the parser macro is given exactly as many arguments as it expects
-              if (arguments.length != implMethod.getParameterTypes.length) {
-                throw InvalidMacroInvocationException(s"parser macro expected ${implMethod.getParameterTypes.length} but got ${arguments.length} arguments.")
-              } else implMethod.invoke(implInstance, arguments: _*)
+                // Make sure that the parser macro is given exactly as many arguments as it expects
+                if (arguments.length != implMethod.getParameterTypes.length) {
+                  throw InvalidMacroInvocationException(s"parser macro expected ${implMethod.getParameterTypes.length} but got ${arguments.length} arguments.")
+                } else implMethod.invoke(implInstance, arguments: _*)
+              }
             }
+          }
+
+          val classloader = {
+            val classpath = global.classPath.asURLs
+            ScalaClassLoader.fromURLs(classpath, self.getClass.getClassLoader)
+          }
+
+          // We may need to try to load the impl twice: once using the normal classloader, and then
+          // using the REPL's classloader in case the first option failed (which most likely means
+          // that we're running inside the REPL).
+          try {
+            loadImplWithClassLoader(classloader)
+          } catch {
+            case ex: ClassNotFoundException =>
+              val virtualDirectory = globalSettings.outputDirs.getSingleOutput.get
+              val newLoader = new AbstractFileClassLoader(virtualDirectory, classloader) {}
+              loadImplWithClassLoader(newLoader)
           }
 
         case _ =>
