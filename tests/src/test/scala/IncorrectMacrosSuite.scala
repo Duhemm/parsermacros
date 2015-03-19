@@ -63,4 +63,12 @@ class IncorrectMacrosSuite extends MacroParserSuite {
     // This macro normally takes 2 arguments
     "macros.Macros.alwaysReturnOne#(hello)#(world)#(!)" shouldFailWith "parser macro expected 2 but got 3 arguments"
   }
+
+  test("Reject macro parser with implicit parameters") {
+    """import scala.meta._
+      |object Incorrect {
+      |  def impl(implicit tokens: Seq[Token]): Tree = ???
+      |  def foo: Int = macro impl
+      |}""".stripMargin shouldFailWith "macro parser cannot have implicit parameters"
+  }
 }

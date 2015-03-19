@@ -226,6 +226,10 @@ trait AnalyzerPlugins extends Traces with Exceptions { self: Plugin =>
               throw InvalidMacroShapeException(rhs.pos, "macro parser can have only one parameter list.")
             }
 
+            if (params.head exists (_.isImplicit)) {
+              throw InvalidMacroShapeException(rhs.pos, "macro parser cannot have implicit parameters.")
+            }
+
             if (!(macroImplSym.returnType <:< typeOf[_root_.scala.meta.Tree])) {
               throw InvalidMacroShapeException(rhs.pos, "macro implementation must return a value of type scala.meta.Tree.")
             }
