@@ -215,34 +215,35 @@ trait AnalyzerPlugins extends Traces with Exceptions { self: Plugin =>
       typer.silent(_.typed(markMacroImplRef(rhs.duplicate))) match {
         case SilentResultValue(select: Select) =>
 
-          val methodSym = select.symbol.asMethod
+          val macroImplSym: MethodSymbol = select.symbol.asMethod
+          val params = macroImplSym.paramLists
 
-          methodSym.paramLists match {
-            // Parser macros can have only one parameter list
-            case params :: Nil if parserMacroCompatibleParameters(params) =>
-              if (!(methodSym.returnType <:< typeOf[_root_.scala.meta.Tree])) {
-                throw InvalidMacroShapeException(rhs.pos, "macro implementation must return a value of type scala.meta.Tree")
-              }
+          // We check whether all the parameters of this macro could be parser macro arguments. This
+          // gives us a pretty reliable heuristic to know whether someone is trying to declare a parser macro.
+          if (params forall parserMacroCompatibleParameters) {
 
-              if (!methodSym.owner.isModuleClass) {
-                throw InvalidMacroShapeException(rhs.pos,
-                  """macro implementation reference has wrong shape. Required:
-                    |macro [<static object>].<method name>""".stripMargin)
-              }
+            if (params.length != 1) {
+              throw InvalidMacroShapeException(rhs.pos, "macro parser can have only one parameter list.")
+            }
 
-              if (!methodSym.isPublic) {
-                throw InvalidMacroShapeException(rhs.pos, "macro implementation must be public")
-              }
+            if (!(macroImplSym.returnType <:< typeOf[_root_.scala.meta.Tree])) {
+              throw InvalidMacroShapeException(rhs.pos, "macro implementation must return a value of type scala.meta.Tree.")
+            }
 
-              bindMacroImpl(ddef.symbol, select)
-              Some(select)
+            if (!macroImplSym.isPublic) {
+              throw InvalidMacroShapeException(rhs.pos, "macro implementation must be public.")
+            }
 
-            case params if params forall parserMacroCompatibleParameters =>
-              throw InvalidMacroShapeException(rhs.pos, "macro parser can have only one parameter list")
+            if (!macroImplSym.isStatic && !select.qualifier.symbol.isStatic) {
+              throw InvalidMacroShapeException(rhs.pos,
+                """macro implementation reference has wrong shape. Required:
+                  |macro [<static object>].<method name>""".stripMargin)
+            }
 
-            case _ =>
-              None
-          }
+            bindMacroImpl(ddef.symbol, select)
+            Some(select)
+
+          } else None
 
         case SilentResultValue(res) =>
           None

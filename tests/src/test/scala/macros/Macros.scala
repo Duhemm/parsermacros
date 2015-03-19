@@ -3,12 +3,12 @@ import scala.meta._
 import scala.meta.dialects.Scala211
 
 object Macros {
-  def impl(tokens: Seq[Token]) = {
+  def countTokensImpl(tokens: Seq[Token]) = {
     val count = tokens.length
     val res = internal.ast.Lit.Int(count)
     res
   }
-  def countTokens: Int = macro impl
+  def countTokens: Int = macro countTokensImpl
 
   def alwaysReturnOneImpl(p1: Seq[Token], p2: Seq[Token]) = {
     internal.ast.Lit.Int(1)
@@ -27,4 +27,20 @@ object Macros {
   def incompatibleParameterSeqType(tokens: List[Token]): Tree = ???
   def incompatibleReturnType(tokens: Seq[Token]): Any = ???
 
+}
+
+abstract class AbstractProvider {
+  def abstractImpl(tokens: Seq[Token]): Tree
+
+  def concreteImpl(tokens: Seq[Token]): Tree =
+    internal.ast.Lit.Int(1)
+}
+
+object ConcreteProvider extends AbstractProvider {
+
+  override def abstractImpl(tokens: Seq[Token]): Tree =
+    internal.ast.Lit.Int(1)
+  def overrideAbstractImplFromParent: Int = macro abstractImpl
+
+  def concreteImplInAbstractParent: Int = macro concreteImpl
 }
