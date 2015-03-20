@@ -1,7 +1,7 @@
 package org.duhemm.parsermacro
 
 trait Exceptions { self: Plugin =>
-  import global._
+  import global.Position
 
   /**
    * Exception thrown to indicate that the macro implementation doesn't have a shape that allows
