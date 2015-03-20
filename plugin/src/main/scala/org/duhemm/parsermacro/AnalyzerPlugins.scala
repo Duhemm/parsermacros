@@ -72,7 +72,6 @@ trait AnalyzerPlugins extends Traces with Exceptions { self: Plugin =>
         case ParserMacroApplication(app, rawArguments, _) =>
           val arguments = macroArgs(typer, app)
           val runtime = macroRuntime(app)
-          val originalExpandee = app + rawArguments.mkString("#(", ")#(", ")")
 
           try {
             runtime(arguments) match {
@@ -205,24 +204,16 @@ trait AnalyzerPlugins extends Traces with Exceptions { self: Plugin =>
      */
     override def pluginsEnterStats(typer: Typer, stats: List[Tree]): List[Tree] = stats
 
-    private object ParserMacroApplication {
-      def unapply(tree: Tree) = {
-
-        val binding = tree.symbol.getAnnotation(MacroImplAnnotation) collect {
-          case AnnotationInfo(_, List(pickle), _) => MacroImplBinding.unpickle(pickle)
-        }
-
-        (tree.attachments.get[ParserMacroArgumentsAttachment].toList, binding) match {
-          case (ParserMacroArgumentsAttachment(arguments) :: Nil, Some(binding)) =>
-            Some((tree, arguments, binding))
-
-          case _ => None
-        }
-      }
-    }
-
+    /**
+     * Verifies that the macro definition `ddef` is correct and can be used as a parser macro.
+     * In case of success, attaches a macro impl binding to the macro def symbol's.
+     */
     private def verifyMacroShape(typer: Typer, ddef: DefDef): Option[Select] = {
 
+      /**
+       * Verifies that all the formal parameters in `params` could be parameters of a parser macro.
+       * This means that their types have to be supertypes of `Seq[scala.meta.Token]`.
+       */
       def parserMacroCompatibleParameters(params: List[Symbol]): Boolean = {
         val expectedType = typeOf[_root_.scala.collection.Seq[_root_.scala.meta.syntactic.Token]]
         params forall (expectedType <:< _.typeSignature)
@@ -275,5 +266,25 @@ trait AnalyzerPlugins extends Traces with Exceptions { self: Plugin =>
       }
 
     }
+
+    /**
+     * Extractor for parser macro applications.
+     */
+    private object ParserMacroApplication {
+      def unapply(tree: Tree): Option[(Tree, List[String], MacroImplBinding)] = {
+
+        val binding = tree.symbol.getAnnotation(MacroImplAnnotation) collect {
+          case AnnotationInfo(_, List(pickle), _) => MacroImplBinding.unpickle(pickle)
+        }
+
+        (tree.attachments.get[ParserMacroArgumentsAttachment].toList, binding) match {
+          case (ParserMacroArgumentsAttachment(arguments) :: Nil, Some(binding)) =>
+            Some((tree, arguments, binding))
+
+          case _ => None
+        }
+      }
+    }
+
   }
 }
