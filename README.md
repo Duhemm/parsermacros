@@ -1,4 +1,4 @@
-# Parser Macros (WIP)
+# Parser Macros (WIP) [![Build Status](https://travis-ci.org/Duhemm/parsermacros.svg?branch=master)](https://travis-ci.org/Duhemm/parsermacros)
 
 This repository holds a Scala compiler plugin that will bring parser macros to Scala. This plugin is still a work in progress.
 
