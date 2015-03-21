@@ -39,4 +39,14 @@ class CorrectMacrosSuite extends MacroParserSuite {
     // This macro always return 1
     "macros.ConcreteProvider.overrideAbstractImplFromParent#(hello)" shouldExpandTo "1"
   }
+
+  test("Accept macros that have type parameters") {
+    // This macro always return 1
+    "macros.Macros.hasTypeParameters[Int]#(hello)" shouldExpandTo "1"
+  }
+
+  test("Accept macros that use their type type parameters") {
+    // This macro always return 1
+    "macros.Macros.hasTypeParametersToo[Any]#(hello)" shouldExpandTo "1"
+  }
 }

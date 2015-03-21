@@ -8,7 +8,9 @@ import scala.reflect.internal.Mode
 import scala.reflect.internal.Flags
 import scala.reflect.internal.Flags._
 
-trait AnalyzerPlugins extends Traces with Exceptions { self: Plugin =>
+trait AnalyzerPlugins extends Traces
+                      with Validation
+                      with Exceptions { self: Plugin =>
   import global._
   import analyzer._
   import definitions._
@@ -210,55 +212,16 @@ trait AnalyzerPlugins extends Traces with Exceptions { self: Plugin =>
      */
     private def verifyMacroShape(typer: Typer, ddef: DefDef): Option[Select] = {
 
-      /**
-       * Verifies that all the formal parameters in `params` could be parameters of a parser macro.
-       * This means that their types have to be supertypes of `Seq[scala.meta.Token]`.
-       */
-      def parserMacroCompatibleParameters(params: List[Symbol]): Boolean = {
-        val expectedType = typeOf[_root_.scala.collection.Seq[_root_.scala.meta.syntactic.Token]]
-        params forall (expectedType <:< _.typeSignature)
-      }
+      typer.silent(_.typed(markMacroImplRef(ddef.rhs.duplicate))) match {
+        case SilentResultValue(select: Select) if verifyMacroImpl(select) =>
+          bindMacroImpl(ddef.symbol, select)
+          Some(select)
 
-      val DefDef(mods, name, tparams, vparamss, tpt, rhs) = ddef
+        case SilentResultValue(TypeApply(select: Select, args)) if verifyMacroImpl(select) =>
+          bindMacroImpl(ddef.symbol, select)
+          Some(select)
 
-      typer.silent(_.typed(markMacroImplRef(rhs.duplicate))) match {
-        case SilentResultValue(select: Select) =>
-
-          val macroImplSym: MethodSymbol = select.symbol.asMethod
-          val params = macroImplSym.paramLists
-
-          // We check whether all the parameters of this macro could be parser macro arguments. This
-          // gives us a pretty reliable heuristic to know whether someone is trying to declare a parser macro.
-          if (params forall parserMacroCompatibleParameters) {
-
-            if (params.length != 1) {
-              throw InvalidMacroShapeException(rhs.pos, "macro parser can have only one parameter list.")
-            }
-
-            if (params.head exists (_.isImplicit)) {
-              throw InvalidMacroShapeException(rhs.pos, "macro parser cannot have implicit parameters.")
-            }
-
-            if (!(macroImplSym.returnType <:< typeOf[_root_.scala.meta.Tree])) {
-              throw InvalidMacroShapeException(rhs.pos, "macro implementation must return a value of type scala.meta.Tree.")
-            }
-
-            if (!macroImplSym.isPublic) {
-              throw InvalidMacroShapeException(rhs.pos, "macro implementation must be public.")
-            }
-
-            if (!macroImplSym.isStatic && !select.qualifier.symbol.isStatic) {
-              throw InvalidMacroShapeException(rhs.pos,
-                """macro implementation reference has wrong shape. Required:
-                  |macro [<static object>].<method name>""".stripMargin)
-            }
-
-            bindMacroImpl(ddef.symbol, select)
-            Some(select)
-
-          } else None
-
-        case SilentResultValue(res) =>
+        case SilentResultValue(_) =>
           None
 
         case SilentTypeError(err) =>

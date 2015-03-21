@@ -21,6 +21,12 @@ object Macros {
   def compatibleReturnTypeImpl(tokens: Seq[Token]): internal.ast.Lit = internal.ast.Lit.Int(1)
   def compatibleReturnType = macro compatibleReturnTypeImpl
 
+  def hasTypeParametersImpl[T](tokens: Seq[Token]): internal.ast.Lit = internal.ast.Lit.Int(1)
+  def hasTypeParameters[T] = macro hasTypeParametersImpl[T]
+
+  def hasTypeParametersTooImpl[T >: Token](token: Seq[T]): Tree = internal.ast.Lit.Int(1)
+  def hasTypeParametersToo[T >: Token] = macro hasTypeParametersTooImpl[T]
+
   // Wrong implementations of parser macros
   def tooManyParamLists(tokens: Seq[Token])(otherTokens: Seq[Token]): Tree = ???
   def incompatibleParameterTypes(something: Int): Tree = ???
