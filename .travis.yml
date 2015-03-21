@@ -10,4 +10,4 @@ before_install:
  - cd ..
 
 script:
-  - sbt -Dmacroparser.scala.home="scala-macroparser/build/pack" clean update cmp tests/test
+  - sbt -Dmacroparser.scala.home="scala-macroparser/build/pack" clean update cmp test

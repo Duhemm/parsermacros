@@ -1,2 +1,3 @@
 alias boot = ;reload ;verifyScalaHome ;project plugin ;iflast shell
 alias cmp = ;plugin/compile ;sandboxClients/compile
+alias test = tests/test
