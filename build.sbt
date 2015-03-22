@@ -1,6 +1,16 @@
-
-lazy val verifyScalaHome = taskKey[Unit]("Makes sure `scalaHome` is set.")
 val scalaHomeProperty = "macroparser.scala.home"
+lazy val verifyScalaHome = taskKey[Unit]("Makes sure `scalaHome` is set.")
+lazy val verifyScalaHomeImpl =
+  verifyScalaHome := {
+    if((System getProperty scalaHomeProperty) == null) {
+      val log = streams.value.log
+      log.error("This plugin can only work properly with a custom version of scalac, because it uses a special syntax for the application of macro parsers.")
+      log.error("A version of scalac that has been patched to support macro parsers can be found here: https://github.com/Duhemm/scala/tree/macroparser")
+      log.error("Please pass the path to your scala home in the following system property: " + scalaHomeProperty)
+      log.error("Compilation of applications of macro parsers will fail.")
+      fail
+    }
+  }
 
 lazy val sharedSettings: Seq[Setting[_]] = Seq(
   version := "0.1.0-SNAPSHOT",
@@ -39,10 +49,11 @@ lazy val plugin: Project =
     libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _),
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false, includeDependency = true),
     assemblyJarName in assembly := pluginJarName,
+    verifyScalaHomeImpl,
     // Produce a fat jar containing dependencies of the plugin after compilation. This is required because the plugin
     // depends on scala.meta, which must therefore be available when the plugin is run.
     // It looks like this task is defined in the wrong order (assembly and then compilation), but it seems to work fine.
-    compile <<= (compile in Compile) dependsOn assembly,
+    compile <<= (compile in Compile) dependsOn (assembly, verifyScalaHome),
     resourceDirectory in Compile <<= baseDirectory(_ / "src" / "main" / "scala" / "org" / "duhemm" / "parsermacro" / "embedded")
   )
 
@@ -51,7 +62,8 @@ lazy val sandboxMacros: Project =
     sharedSettings ++ usePluginSettings: _*
   ) settings (
     publishArtifact in Compile := false,
-    scalacOptions ++= Seq()
+    verifyScalaHomeImpl,
+    compile <<= (compile in Compile) dependsOn verifyScalaHome
   )
 
 lazy val sandboxClients =
@@ -59,17 +71,9 @@ lazy val sandboxClients =
     sharedSettings ++ usePluginSettings: _*
   ) settings (
     // Always clean before running compile in this subproject
+    verifyScalaHomeImpl,
     compile <<= (compile in Compile) dependsOn (verifyScalaHome, clean),
-    scalacOptions ++= Seq("-Ymacro-debug-verbose"),
-    verifyScalaHome := {
-      if((System getProperty scalaHomeProperty) == null) {
-        val log = streams.value.log
-        log.error("This plugin can only work properly with a custom version of scalac, because it uses a special syntax for the application of macro parsers.")
-        log.error("A version of scalac that has been patched to support macro parsers can be found here: https://github.com/Duhemm/scala/tree/macroparser")
-        log.error("Please pass the path to your scala home in the following system property: " + scalaHomeProperty)
-        log.error("Compilation of clients of macro parsers will fail.")
-      }
-    }
+    scalacOptions ++= Seq("-Ymacro-debug-verbose")
   ) dependsOn sandboxMacros
 
 lazy val tests =
