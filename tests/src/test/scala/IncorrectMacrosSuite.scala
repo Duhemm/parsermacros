@@ -44,7 +44,7 @@ class IncorrectMacrosSuite extends MacroParserSuite {
     // We just want to make sure that we determine that the macro implementation cannot be used
     // as a parser macro, but don't output any error (after all, it may still be a valid whatever-you-want macro)
     """object Incorrect {
-      |  def hello: Int = macro macros.Macros.incompatibleParameterTypes
+      |  def hello: Int = macro macros.Macros.incompatibleParameterSeqType
       |}""".stripMargin.shouldNotBeConsideredAParserMacro
   }
 

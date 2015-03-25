@@ -1,15 +1,6 @@
 import org.scalatest.FunSuite
-import scala.tools.reflect.ToolBoxError
-
 abstract class MacroParserSuite extends FunSuite {
   import compiler.Compiler._
-
-  /**
-   * Determines whether or not the product of the toolbox contains error
-   * (typically a tree that contains an error because a macro could not expand)
-   */
-  def hasError(tree: tb.u.Tree): Boolean =
-    tree.toString.contains(": error>") // TODO: Improve this
 
   implicit class CompileAndCheck(code: String) {
 
@@ -27,12 +18,19 @@ abstract class MacroParserSuite extends FunSuite {
     }
 
     /**
-     * Verifies that `code` contains an error after compilation,
-     * according to `hasError`.
+     * Verifies that a parser macro definition is rejected by the plugin.
+     * Because we don't want to be too restrictive and issue an error for a macro
+     * that may be any other flavour of macro, we check that the compiler issues
+     * "macro definition needs to be enabled".
      */
     def shouldNotBeConsideredAParserMacro: Unit = {
-      val expansion = compile(code)
-      assert(hasError(expansion))
+      try {
+        compile(code)
+        fail("An error was expected during the compilation, but none was issued.")
+      } catch {
+        case err @ CompilationFailed(msg) =>
+          assert(msg contains "macro definition needs to be enabled")
+      }
     }
 
     /**
@@ -44,7 +42,7 @@ abstract class MacroParserSuite extends FunSuite {
         compile(code)
         fail("An error was expected during the compilation, but none was issued.")
       } catch {
-        case err @ ToolBoxError(msg, _) =>
+        case err @ CompilationFailed(msg) =>
           assert(msg contains expected)
       }
     }
