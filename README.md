@@ -4,35 +4,34 @@ This repository holds a Scala compiler plugin that will bring parser macros to S
 
 ## Building and using the plugin
 
-To use the plugin, you will need a custom version of scalac, because parser macros will require a special syntax that differentiates their application from standard function application.
-
-My [fork of scala/scala](https://github.com/Duhemm/scala/tree/macroparser) contains the modified parser. Simply build it, clone this repository and start sbt like this:
+The plugin is not yet published anywhere. You will need to clone this repository and build the plugin yourself. Fortunately, it's pretty straightforward to do using sbt:
 
 ```
-$ sbt -Dmacroparser.scala.home="[path where you built scala]"
+$ git clone git@github.com:Duhemm/parsermacro.git
+$ cd parsermacro
+$ sbt cmp test
 ```
 
 You can place your macro implementations in `sandbox-macros/` and your macro clients in `sandbox-clients/`.
 
 ### Using the plugin in the Scala REPL
 
-You will need to have built my [fork of scala/scala](https://github.com/Duhemm/scala/tree/macroparser). You can do it just [the way travis-ci does](https://github.com/Duhemm/parsermacros/blob/master/.travis.yml). You also need to build the plugin:
-```
-$ sbt -Dmacroparser.scala.home="[path where you build scala]" cmp
-```
-
-This will build the plugin in `plugin/target/scala-2.11/plugin_2.11-0.1.0-SNAPSHOT.jar`. To start a scala REPL with the plugin loaded, simply run:
+This plugin can also be used directly in the Scala REPL after you've built it. To build a self-contained JAR that includes this plugin among with its dependencies ([scala.meta](https://github.com/scalameta/scalameta)), the best is to use sbt:
 
 ```
-$ SCALA="/where/you/cloned/scala"
-$ PMACRO="/where/you/cloned/parsermacro"
-$ $SCALA/build/quick/bin/scala -Xplugin:$PMACRO/plugin/target/scala-2.11/fat-plugin.jar -cp $PMACRO/plugin/target/scala-2.11/fat-plugin.jar
+$ sbt cmp
 ```
 
-You can then start having fun with macro parsers !
+This will produce a fat JAR in `plugin/target/scala-2.11/fat-plugin.jar`. To start a Scala REPL with the plugin loaded, simply run:
 
 ```
-Welcome to Scala version 2.11.6-20150213-114752-da49d9a00e (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_31).
+$ scala -Xplugin:plugin/target/scala-2.11/fat-plugin.jar -cp plugin/target/scala-2.11/fat-plugin.jar
+```
+
+You can then start having fun with parser macros !
+
+```scala
+Welcome to Scala version 2.11.6 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_31).
 Type in expressions to have them evaluated.
 Type :help for more information.
 
