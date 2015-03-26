@@ -49,7 +49,7 @@ trait AnalyzerPlugins extends Traces
      *
      * $nonCumulativeReturnValueDoc.
      */
-    override def pluginsIsBlackbox(macroDef: Symbol): Option[Boolean] = None
+    override def pluginsIsBlackbox(macroDef: Symbol): Option[Boolean] = Some(true)
 
     /**
      * Expands an application of a def macro (i.e. of a symbol that has the MACRO flag set),
@@ -170,41 +170,6 @@ trait AnalyzerPlugins extends Traces
           None
       }
     }
-
-    /**
-     * Creates a symbol for the given tree in lexical context encapsulated by the given namer.
-     *
-     * Default implementation provided in `namer.standardEnterSym` handles MemberDef's and Imports,
-     * doing nothing for other trees (DocDef's are seen through and rewrapped). Typical implementation
-     * of `enterSym` for a particular tree flavor creates a corresponding symbol, assigns it to the tree,
-     * enters the symbol into scope and then might even perform some code generation.
-     *
-     * $nonCumulativeReturnValueDoc.
-     */
-    override def pluginsEnterSym(namer: Namer, tree: Tree): Boolean = false
-
-    /**
-     * Makes sure that for the given class definition, there exists a companion object definition.
-     *
-     * Default implementation provided in `namer.standardEnsureCompanionObject` looks up a companion symbol for the class definition
-     * and then checks whether the resulting symbol exists or not. If it exists, then nothing else is done.
-     * If not, a synthetic object definition is created using the provided factory, which is then entered into namer's scope.
-     *
-     * $nonCumulativeReturnValueDoc.
-     */
-    override def pluginsEnsureCompanionObject(namer: Namer, cdef: ClassDef, creator: ClassDef => Tree = companionModuleDef(_)): Option[Symbol] = None
-
-    /**
-     * Prepares a list of statements for being typechecked by performing domain-specific type-agnostic code synthesis.
-     *
-     * Trees passed into this method are going to be named, but not typed.
-     * In particular, you can rely on the compiler having called `enterSym` on every stat prior to passing calling this method.
-     *
-     * Default implementation does nothing. Current approaches to code syntheses (generation of underlying fields
-     * for getters/setters, creation of companion objects for case classes, etc) are too disparate and ad-hoc
-     * to be treated uniformly, so I'm leaving this for future work.
-     */
-    override def pluginsEnterStats(typer: Typer, stats: List[Tree]): List[Tree] = stats
 
     /**
      * Verifies that the macro definition `ddef` is correct and can be used as a parser macro.
