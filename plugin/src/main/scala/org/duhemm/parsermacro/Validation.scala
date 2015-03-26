@@ -27,11 +27,11 @@ trait Validation { self: Plugin =>
       if (params forall parserMacroCompatibleParameters) {
 
         if (params.length != 1) {
-          throw InvalidMacroShapeException(select.pos, "macro parser can have only one parameter list.")
+          throw InvalidMacroShapeException(select.pos, "parser macro can have only one parameter list.")
         }
 
         if (params.head exists (_.isImplicit)) {
-          throw InvalidMacroShapeException(select.pos, "macro parser cannot have implicit parameters.")
+          throw InvalidMacroShapeException(select.pos, "parser macro cannot have implicit parameters.")
         }
 
         if (!(macroImplSym.returnType <:< typeOf[_root_.scala.meta.Tree])) {

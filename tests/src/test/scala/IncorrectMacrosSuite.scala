@@ -29,7 +29,7 @@ class IncorrectMacrosSuite extends MacroParserSuite {
   test("Reject a macro that has more than one parameter lists") {
     """object Incorrect {
       |  def hello: Int = macro macros.Macros.tooManyParamLists
-      |}""".stripMargin shouldFailWith "macro parser can have only one parameter list"
+      |}""".stripMargin shouldFailWith "parser macro can have only one parameter list"
   }
 
   test("Reject a macro whose parameters are incompatible with parser macros") {
@@ -64,11 +64,11 @@ class IncorrectMacrosSuite extends MacroParserSuite {
     "macros.Macros.alwaysReturnOne#(hello)#(world)#(!)" shouldFailWith "parser macro expected 2 but got 3 arguments"
   }
 
-  test("Reject macro parser with implicit parameters") {
+  test("Reject parser macro with implicit parameters") {
     """import scala.meta._
       |object Incorrect {
       |  def impl(implicit tokens: Seq[Token]): Tree = ???
       |  def foo: Int = macro impl
-      |}""".stripMargin shouldFailWith "macro parser cannot have implicit parameters"
+      |}""".stripMargin shouldFailWith "parser macro cannot have implicit parameters"
   }
 }
