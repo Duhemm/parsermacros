@@ -3,11 +3,5 @@ language: scala
 scala:
   - 2.11.6
 
-before_install:
- - git clone -b macroparser https://github.com/Duhemm/scala.git scala-macroparser
- - cd scala-macroparser
- - ant
- - cd ..
-
 script:
-  - sbt -Dmacroparser.scala.home="scala-macroparser/build/pack" clean update cmp test
+  - sbt clean update cmp test
