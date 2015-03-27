@@ -7,7 +7,6 @@ import scala.tools.cmd.CommandLineParser
 import scala.tools.nsc.{ CompilerCommand, Global, Settings }
 import scala.tools.nsc.io.VirtualDirectory
 import scala.tools.nsc.reporters.AbstractReporter
-import scala.tools.reflect.ReflectGlobal
 
 /**
  * Helper object to compile code snippets to a virtual directory.
@@ -46,7 +45,7 @@ object Compiler {
     command.settings.outputDirs setSingleOutput outputDir
     val reporter = new TestReporter(command.settings)
 
-    new ReflectGlobal(command.settings, reporter, Compiler.getClass.getClassLoader)
+    new Global(command.settings, reporter)
   }
 
   /**

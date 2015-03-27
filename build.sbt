@@ -67,8 +67,9 @@ lazy val tests =
     libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _),
     libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test",
     libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.12.2" % "test",
-    compile in Test := {
-      sys.props("sbt.class.directory") = (classDirectory in Test).value.getAbsolutePath
-      (compile in Test).value
+    fullClasspath in Test := {
+      val testcp = (fullClasspath in Test).value.files.map(_.getAbsolutePath).mkString(java.io.File.pathSeparatorChar.toString)
+      sys.props("sbt.class.directory") = testcp
+      (fullClasspath in Test).value
     }
   ) dependsOn plugin
