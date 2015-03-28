@@ -53,13 +53,13 @@ object Compiler {
    */
   // TODO: Returning the compiled code as a String is a huge step backwards compared
   // to using toolboxes... It would be cool to extract the tree we're interested in.
-  def compile(code: String): String = {
+  def compile(code: String) = {
     val global = getCompiler
     import global._
     val source = new BatchSourceFile(NoFile, wrap(code))
     val run = new Run
     run.compileSources(source :: Nil)
-    unWrap(run.units.next.body)
+    unWrap(global)(run.units.next.body)
   }
 
   /**
@@ -75,23 +75,15 @@ object Compiler {
    * Extracts very naively the result of a macro expansion from the output of scalac,
    * or returns its input if the extraction failed (it will fail if the tree didn't need to be wrapped).
    */
-  private def unWrap(tree: Any): String = {
-    import scala.util.matching.Regex
-    val regex = """package \<empty\> \{
-                  |  class Compilation extends Object \{
-                  |    def <init>\(\): Compilation = \{
-                  |      Compilation\.super\.<init>\(\);
-                  |      (.+?);
-                  |      \(\)
-                  |    }
-                  |  }
-                  |}""".stripMargin.r
+  private def unWrap(global: Global)(tree: global.Tree): global.Tree = {
+    import global._
 
-    regex.findFirstMatchIn(tree.toString) match {
-      case Some(result) if result.groupCount == 1 =>
-        result.group(1)
+    tree match {
+      case PackageDef(_, List(ClassDef(_, _, _, Template(_, _, List(DefDef(_, _, _, _, _, block: Block)))))) if block.stats.length == 2 =>
+        block.stats(1)
+
       case _ =>
-        tree.toString
+        tree
     }
   }
 
