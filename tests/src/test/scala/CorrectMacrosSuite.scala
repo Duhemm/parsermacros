@@ -49,4 +49,14 @@ class CorrectMacrosSuite extends MacroParserSuite {
     // This macro always return 1
     "macros.Macros.hasTypeParametersToo[Any]#(hello)" shouldExpandTo "1"
   }
+
+  test("Accept & expand lightweight syntax macros") {
+    // We are actually giving 5 tokens to the parser macro: `BOF`, "hello", ` `, "world", `EOF`
+    "macros.Macros.lightweight#(hello world)" shouldExpandTo "5"
+  }
+
+  test("Accept & expand multiparameter lightweight syntax macros") {
+    // We are actually giving 6 tokens to the parser macro: `BOF` (2x), "hello", "world", `EOF` (2x)
+    "macros.Macros.multiparameterLightweight#(hello)#(world)" shouldExpandTo "6"
+  }
 }

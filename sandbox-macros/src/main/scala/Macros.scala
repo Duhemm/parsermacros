@@ -55,6 +55,10 @@ object Macros {
   def iterate: Unit = macro localMacroDef
   def miniMacro: Int = macro A.Nested.miniMacro
 
+  def lightweight(tokens: Seq[Token]): Tree = macro {
+    internal.ast.Lit.Int(tokens.length)
+  }
+
 
   // Classic scala.reflect macro to make sure the plugin just ignores it.
   def classicImpl(c: scala.reflect.macros.blackbox.Context)(x: c.Tree): c.Tree = {

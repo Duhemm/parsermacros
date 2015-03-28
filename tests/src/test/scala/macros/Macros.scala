@@ -27,6 +27,20 @@ object Macros {
   def hasTypeParametersTooImpl[T >: Token](token: Seq[T]): Tree = internal.ast.Lit.Int(1)
   def hasTypeParametersToo[T >: Token] = macro hasTypeParametersTooImpl[T]
 
+  // Yes, this is overly complicated: I just want to make sure that
+  // we can put whatever we want in the lightweight syntax.
+  def lightweight(tokens: Seq[Token]): Tree = macro {
+    def count[T](t: List[T]): Int = t match {
+      case x :: xs => 1 + count(xs)
+      case Nil => 0
+    }
+    internal.ast.Lit.Int(count(tokens.toList))
+  }
+
+  def multiparameterLightweight(t1: Seq[Token], t2: Seq[Token]) = macro {
+    internal.ast.Lit.Int(t1.length + t2.length)
+  }
+
   // Wrong implementations of parser macros
   def tooManyParamLists(tokens: Seq[Token])(otherTokens: Seq[Token]): Tree = ???
   def incompatibleParameterTypes(something: Int): Tree = ???
@@ -35,11 +49,16 @@ object Macros {
 
 }
 
-abstract class AbstractProvider {
+// The test `Accept a macro whose implementation is defined in an abstract parent` breaks
+// if this is an abstract class, but passes if this is a trait. I have absolutely no idea
+// regarding what happens here. It was working before I started implementing support for
+// lightweight syntax.
+trait AbstractProvider {
   def abstractImpl(tokens: Seq[Token]): Tree
 
-  def concreteImpl(tokens: Seq[Token]): Tree =
+  def concreteImpl(tokens: Any): Tree = {
     internal.ast.Lit.Int(1)
+  }
 }
 
 object ConcreteProvider extends AbstractProvider {

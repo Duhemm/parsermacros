@@ -10,6 +10,7 @@ import scala.reflect.internal.Flags._
 
 trait AnalyzerPlugins extends Traces
                       with Validation
+                      with Runtime
                       with Exceptions { self: Plugin =>
   import global._
   import analyzer._
@@ -19,6 +20,29 @@ trait AnalyzerPlugins extends Traces
   def globalSettings = global.settings
 
   object MacroPlugin extends analyzer.MacroPlugin {
+
+    /**
+     * Prepares a list of statements for being typechecked by performing domain-specific type-agnostic code synthesis.
+     *
+     * Trees passed into this method are going to be named, but not typed.
+     * In particular, you can rely on the compiler having called `enterSym` on every stat prior to passing calling this method.
+     *
+     * Default implementation does nothing. Current approaches to code syntheses (generation of underlying fields
+     * for getters/setters, creation of companion objects for case classes, etc) are too disparate and ad-hoc
+     * to be treated uniformly, so I'm leaving this for future work.
+     */
+    override def pluginsEnterStats(typer: Typer, stats: List[Tree]): List[Tree] = stats flatMap {
+      // Whenever we encounter a lightweight parser macro definition, we synthesize a private implementation that will
+      // be executed whenever we expand the macro.
+      case ddef @ LightweightParserMacroImpl(_, name, _, _, _, _) =>
+        val synthesized = copyDefDef(synthesizeMacroImpl(ddef.asInstanceOf[DefDef]))(mods = Modifiers(PRIVATE), name = TermName(name + "$impl"))
+        newNamer(typer.context) enterSym synthesized
+        List(synthesized, ddef)
+
+      case other =>
+        List(other)
+    }
+
     /**
      * Typechecks the right-hand side of a macro definition (which typically features
      * a mere reference to a macro implementation).
@@ -131,40 +155,11 @@ trait AnalyzerPlugins extends Traces
      */
     override def pluginsMacroRuntime(expandee: Tree): Option[MacroRuntime] = {
       expandee match {
-        case ParserMacroApplication(_, _, MacroImplBinding(false, true, className, methName, signature, targs)) =>
-
-          def loadImplWithClassLoader(classloader: ScalaClassLoader): Option[MacroRuntime] = {
-            val implClass = Class.forName(className, true, classloader)
-
-            implClass.getMethods find (_.getName == methName) map { implMethod =>
-              val implInstance = ReflectionUtils.staticSingletonInstance(classloader, className)
-              (x: MacroArgs) => {
-                val arguments = x.others.asInstanceOf[Seq[AnyRef]]
-
-                // Make sure that the parser macro is given exactly as many arguments as it expects
-                if (arguments.length != implMethod.getParameterTypes.length) {
-                  throw InvalidMacroInvocationException(s"parser macro expected ${implMethod.getParameterTypes.length} but got ${arguments.length} arguments.")
-                } else implMethod.invoke(implInstance, arguments: _*)
-              }
-            }
-          }
-
-          val classloader = {
-            val classpath = global.classPath.asURLs
-            ScalaClassLoader.fromURLs(classpath, self.getClass.getClassLoader)
-          }
-
-          // We may need to try to load the impl twice: once using the normal classloader, and then
-          // using the REPL's classloader in case the first option failed (which most likely means
-          // that we're running inside the REPL).
-          try {
-            loadImplWithClassLoader(classloader)
-          } catch {
-            case ex: ClassNotFoundException =>
-              val virtualDirectory = globalSettings.outputDirs.getSingleOutput.get
-              val newLoader = new AbstractFileClassLoader(virtualDirectory, classloader) {}
-              loadImplWithClassLoader(newLoader)
-          }
+        case ParserMacroApplication(_, _, ParserMacroBinding(binding)) =>
+          binding.fold(
+            legacyBinding => legacyRuntime(legacyBinding),
+            scalametaBinding => scalametaRuntime(scalametaBinding)
+          )
 
         case _ =>
           None
@@ -172,46 +167,30 @@ trait AnalyzerPlugins extends Traces
     }
 
     /**
-     * Verifies that the macro definition `ddef` is correct and can be used as a parser macro.
-     * In case of success, attaches a macro impl binding to the macro def symbol's.
-     */
-    private def verifyMacroShape(typer: Typer, ddef: DefDef): Option[Select] = {
-
-      typer.silent(_.typed(markMacroImplRef(ddef.rhs.duplicate))) match {
-        case SilentResultValue(select: Select) if verifyMacroImpl(select) =>
-          bindMacroImpl(ddef.symbol, select)
-          Some(select)
-
-        case SilentResultValue(TypeApply(select: Select, args)) if verifyMacroImpl(select) =>
-          bindMacroImpl(ddef.symbol, select)
-          Some(select)
-
-        case SilentResultValue(_) =>
-          None
-
-        case SilentTypeError(err) =>
-          throw InvalidMacroShapeException(err.errPos, err.errMsg)
-      }
-
-    }
-
-    /**
      * Extractor for parser macro applications.
      */
     private object ParserMacroApplication {
-      def unapply(tree: Tree): Option[(Tree, List[String], MacroImplBinding)] = {
+      def unapply(tree: Tree): Option[(Tree, List[String], ParserMacroBinding)] = {
 
-        val binding = tree.symbol.getAnnotation(MacroImplAnnotation) collect {
-          case AnnotationInfo(_, List(pickle), _) => MacroImplBinding.unpickle(pickle)
+        val binding = tree.symbol.annotations.filter(_.atp.typeSymbol == MacroImplAnnotation) match {
+          case AnnotationInfo(_, List(pickle), _) :: Nil                        => Some(new ParserMacroBinding(MacroImplBinding.unpickle(pickle)))
+          case _ :: AnnotationInfo(_, List(ScalahostSignature(ddef)), _) :: Nil => Some(new ParserMacroBinding(ddef))
+          case _                                                                => None
         }
 
         (tree.attachments.get[ParserMacroArgumentsAttachment].toList, binding) match {
           case (ParserMacroArgumentsAttachment(arguments) :: Nil, Some(binding)) =>
             Some((tree, arguments, binding))
 
-          case _ => None
+          case _ =>
+            None
         }
       }
+    }
+
+    private case class ParserMacroBinding(binding: Either[MacroImplBinding, DefDef]) {
+      def this(binding: MacroImplBinding) = this(Left(binding))
+      def this(ddef: DefDef) = this(Right(ddef))
     }
 
   }

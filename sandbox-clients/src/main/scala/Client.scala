@@ -4,6 +4,6 @@ object Client extends App {
     println(x)
   }
 
-  println("Hello, world!")
+  println(Macros.lightweight#(Hello, world!))
 
 }

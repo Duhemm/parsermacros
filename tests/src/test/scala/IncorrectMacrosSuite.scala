@@ -71,4 +71,12 @@ class IncorrectMacrosSuite extends MacroParserSuite {
       |  def foo: Int = macro impl
       |}""".stripMargin shouldFailWith "parser macro cannot have implicit parameters"
   }
+
+  test("Fail on lightweight multi parameter macros when not enough arguments are given") {
+    "macros.Macros.multiparameterLightweight#(hello)" shouldFailWith "parser macro expected 2 but got 1 arguments"
+  }
+
+  test("Fail on lightweight multi parameter macros when too many arguemnts are given") {
+    "macros.Macros.multiparameterLightweight#(hello)#(world)#(!)" shouldFailWith "parser macro expected 2 but got 3 arguments"
+  }
 }
