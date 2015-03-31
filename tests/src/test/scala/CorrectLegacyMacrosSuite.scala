@@ -50,4 +50,14 @@ class CorrectLegacyMacrosSuite extends MacroParserSuite {
     "macros.LegacyMacros.hasTypeParametersToo[Any]#(hello)" shouldExpandTo "1"
   }
 
+  test("Accept macros defined inside a package object") {
+    pendingUntilFixed {
+      """import scala.meta._
+        |package object incorrect {
+        |  def impl(t: Seq[Token]): Tree = internal.ast.Lit.Int(1)
+        |  def hello: Int = macro impl
+        |}""".stripMargin.shouldCompile
+    }
+  }
+
 }

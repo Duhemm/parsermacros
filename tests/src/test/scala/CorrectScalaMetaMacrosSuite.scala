@@ -49,4 +49,13 @@ class CorrectScalaMetaMacrosSuite extends MacroParserSuite {
     // This macro always return 1
     "macros.LightweightMacros.hasTypeParametersToo[Any]#(hello)" shouldExpandTo "1"
   }
+
+  test("Accept macros defined inside a package object") {
+    pendingUntilFixed {
+      """import scala.meta._
+        |package object incorrect {
+        |  def hello(t: Seq[Token]): Tree = macro { internal.ast.Lit.Int(1) }
+        |}""".stripMargin.shouldCompile
+    }
+  }
 }

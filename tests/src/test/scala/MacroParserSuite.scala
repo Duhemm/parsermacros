@@ -46,6 +46,15 @@ abstract class MacroParserSuite extends FunSuite {
           assert(msg contains expected)
       }
     }
+
+    def shouldCompile: Unit = {
+      try {
+        compile(code)
+      } catch {
+        case err @ CompilationFailed(msg) =>
+        fail(s"Compilation failed but success was expected:\n$msg")
+      }
+    }
   }
 
 
