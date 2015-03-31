@@ -3,8 +3,16 @@ lazy val sharedSettings: Seq[Setting[_]] = Seq(
   version := "0.1.0-SNAPSHOT",
   scalaVersion := "2.11.6",
   resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-  libraryDependencies += "org.scalameta" %% "scalameta" % "0.1.0-SNAPSHOT",
-  libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
+  // libraryDependencies += "org.scalameta" %% "scalameta" % "0.1.0-SNAPSHOT" % "provided",
+  libraryDependencies += ("org.scalameta" % "scalahost" % "0.2.0-SNAPSHOT") cross CrossVersion.full,
+  libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _ % "provided"),
+  assemblyMergeStrategy in assembly := {
+    case "META-INF/MANIFEST.MF" => MergeStrategy.discard
+    case "scalac-plugin.xml" => MergeStrategy.first
+    case x =>
+      val oldStrategy = (assemblyMergeStrategy in assembly).value
+      oldStrategy(x)
+  },
   scalaHome := {
     System getProperty scalaHomeProperty match {
       case null =>

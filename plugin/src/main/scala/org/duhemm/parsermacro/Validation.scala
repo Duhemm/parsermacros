@@ -206,23 +206,23 @@ trait Validation { self: Plugin =>
     }
   }
 
-  object LegacySignature extends FixupSignature {
-    def apply(): Tree = fixup(Apply(Ident(TermName("macro")), List(Assign(Literal(Constant("macroEngine")), Literal(Constant("Scalahost experimental macro engine compatible with scala.meta APIs"))))))
-  }
+  // object LegacySignature extends FixupSignature {
+  //   def apply(): Tree = fixup(Apply(Ident(TermName("macro")), List(Assign(Literal(Constant("macroEngine")), Literal(Constant("Scalahost experimental macro engine compatible with scala.meta APIs"))))))
+  // }
 
-  object ScalahostSignature extends FixupSignature {
-    def apply(implDdef: DefDef): Tree = {
-      fixup(Apply(Ident(TermName("ScalametaMacro")), List(
-        Assign(Literal(Constant("implDdef")), implDdef))))
-    }
-    def unapply(tree: Tree): Option[DefDef] = {
-      tree match {
-        case Apply(Ident(TermName("ScalametaMacro")), List(
-          Assign(Literal(Constant("implDdef")), (implDdef: DefDef)))) => Some(implDdef)
-        case _ => None
-      }
-    }
-  }
+  // object ScalahostSignature extends FixupSignature {
+  //   def apply(implDdef: DefDef): Tree = {
+  //     fixup(Apply(Ident(TermName("ScalametaMacro")), List(
+  //       Assign(Literal(Constant("implDdef")), implDdef))))
+  //   }
+  //   def unapply(tree: Tree): Option[DefDef] = {
+  //     tree match {
+  //       case Apply(Ident(TermName("ScalametaMacro")), List(
+  //         Assign(Literal(Constant("implDdef")), (implDdef: DefDef)))) => Some(implDdef)
+  //       case _ => None
+  //     }
+  //   }
+  // }
 
 
 }

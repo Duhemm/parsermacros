@@ -10,6 +10,8 @@ import scala.reflect.io.AbstractFile
 trait Runtime { self: Plugin =>
 
   import global._
+  import definitions._
+  import treeInfo._
   import analyzer._
 
   /**
@@ -72,12 +74,26 @@ trait Runtime { self: Plugin =>
           val className = context.macroApplication.symbol.owner.fullName + "$"
           val methName = binding.name.toString + "$impl"
 
-          findMethod(className, methName) map {
-            case (instance, method) =>
-              method.setAccessible(true)
-              invoke(instance, method, x)
-          } getOrElse {
-            throw InvalidMacroInvocationException(s"Could not find method $methName in class $className.")
+          if (currentRun compiles binding.symbol) {
+            import scala.meta.internal.{ ast => m }
+            import scala.meta.eval._
+            implicit val mc = scala.meta.Scalahost.mkMacroContext[global.type](context)
+            val mMacroBody = mc.toMtree(binding, classOf[m.Defn.Def])
+            val mMacroEnv = scala.collection.mutable.Map[scala.meta.Term.Name, Any]()
+            val mMacroArgss = List(Nil, List(mc)) // TODO: accommodate margss
+            val mMacroApplication = mMacroArgss.foldLeft(mMacroBody.name: scala.meta.Term)((curr, args) => {
+              val margs = args.map(arg => { val name = scala.meta.Term.fresh("arg"); mMacroEnv(name) = arg; name })
+              m.Term.Apply(curr.asInstanceOf[m.Term], margs.asInstanceOf[scala.collection.immutable.Seq[m.Term]])
+            })
+            mMacroApplication.eval(mMacroEnv.toMap)
+          } else {
+            findMethod(className, methName) map {
+              case (instance, method) =>
+                method.setAccessible(true)
+                invoke(instance, method, x)
+            } getOrElse {
+              throw InvalidMacroInvocationException(s"Could not find method $methName in class $className.")
+            }
           }
         }
 
