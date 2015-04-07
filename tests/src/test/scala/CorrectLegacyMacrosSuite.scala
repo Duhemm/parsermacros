@@ -60,4 +60,9 @@ class CorrectLegacyMacrosSuite extends MacroParserSuite {
     }
   }
 
+  test("Accept macros defined in a deeply nested package") {
+    // This macro always return 1
+    "macros.deeply.nested.pkg.DeeplyNestedLegacy.Deeply.Nested.Obj.foo#(hello)" shouldExpandTo "1"
+  }
+
 }

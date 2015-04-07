@@ -66,10 +66,22 @@ trait Runtime { self: Plugin =>
    * stored in `binding`.
    */
   def scalametaRuntime(binding: DefDef): Option[MacroRuntime] = {
+
+      /**
+       * Computes the correct name for the object that holds the implementation we're looking for.
+       */
+      def erasedName(sym: Symbol): String = {
+        def rootOrEmpty(sym: Symbol) = sym.toString == "package <empty>" || sym.toString == "package <root>"
+        sym.ownersIterator.takeWhile(!rootOrEmpty(_)).toList.reverse.partition(_.isPackage) match {
+          case (Nil, objs)  => objs.map(_.name).mkString("", "$", "$")
+          case (pkgs, objs) => pkgs.map(_.name).mkString(".") + (objs.map(_.name).mkString(".", "$", "$"))
+        }
+      }
+
       val runtime =
         (x: MacroArgs) => {
           val context = x.c
-          val className = context.macroApplication.symbol.owner.fullName + "$"
+          val className = erasedName(context.macroApplication.symbol.owner)
           val methName = binding.name.toString + "$impl"
 
           findMethod(className, methName) map {

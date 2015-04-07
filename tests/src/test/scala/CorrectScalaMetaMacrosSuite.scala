@@ -58,4 +58,9 @@ class CorrectScalaMetaMacrosSuite extends MacroParserSuite {
         |}""".stripMargin.shouldCompile
     }
   }
+
+  test("Accept macros defined in a deeply nested package") {
+    // This macro always return 1
+    "macros.deeply.nested.pkg.DeeplyNestedLightweight.Deeply.Nested.Obj.foo#(hello)" shouldExpandTo "1"
+  }
 }
