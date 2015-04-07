@@ -71,7 +71,7 @@ trait Runtime { self: Plugin =>
        * Computes the correct name for the object that holds the implementation we're looking for.
        */
       def erasedName(sym: Symbol): String = {
-        def rootOrEmpty(sym: Symbol) = sym.toString == "package <empty>" || sym.toString == "package <root>"
+        def rootOrEmpty(sym: Symbol) = sym.isEmptyPackageClass || sym.isRoot
         sym.ownersIterator.takeWhile(!rootOrEmpty(_)).toList.reverse.partition(_.isPackage) match {
           case (Nil, objs)  => objs.map(_.name).mkString("", "$", "$")
           case (pkgs, objs) => pkgs.map(_.name).mkString(".") + (objs.map(_.name).mkString(".", "$", "$"))
