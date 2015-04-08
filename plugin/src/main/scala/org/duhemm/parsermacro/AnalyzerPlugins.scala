@@ -101,11 +101,13 @@ trait AnalyzerPlugins extends Traces
 
           try {
             runtime(arguments) match {
-              case expanded: scala.meta.Tree =>
+              case expanded: scala.meta.internal.ast.Tree =>
                 import scala.meta.dialects.Scala211
                 import scala.meta.ui._
+                import scala.meta.Scalahost
 
-                Some(typer.typed(arguments.c.parse(expanded.toString), pt))
+                val gTree = Scalahost.mkGlobalContext(global).toGtree(expanded).asInstanceOf[Tree]
+                Some(typer.typed(gTree, pt))
 
               case _ =>
                 None

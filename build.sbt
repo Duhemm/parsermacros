@@ -34,8 +34,16 @@ lazy val plugin: Project =
     sharedSettings: _*
   ) settings (
     libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _),
+    libraryDependencies += "org.scalameta" % "scalahost" % "0.1.0-SNAPSHOT" cross CrossVersion.full,
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false, includeDependency = true),
     assemblyJarName in assembly := pluginJarName,
+    assemblyMergeStrategy in assembly := {
+      // scalahost also provides `scalac-plugin.xml`, but we are only interested in ours.
+      case "scalac-plugin.xml"                           => MergeStrategy.first
+      case x =>
+        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        oldStrategy(x)
+    },
     // Produce a fat jar containing dependencies of the plugin after compilation. This is required because the plugin
     // depends on scala.meta, which must therefore be available when the plugin is run.
     // It looks like this task is defined in the wrong order (assembly and then compilation), but it seems to work fine.
