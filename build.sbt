@@ -29,6 +29,20 @@ lazy val usePluginSettings = Seq(
   }
 )
 
+lazy val quasiquotesMacros: Project =
+  (project in file("quasiquotes-macros")) settings (
+    sharedSettings: _*
+  ) settings (
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
+  )
+
+lazy val quasiquotes: Project =
+  (project in file("quasiquotes")) settings (
+    sharedSettings: _*
+  ) settings (
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
+  ) aggregate quasiquotesMacros dependsOn quasiquotesMacros
+
 lazy val plugin: Project =
   (project in file("plugin")) settings (
     sharedSettings: _*
@@ -49,7 +63,7 @@ lazy val plugin: Project =
     // It looks like this task is defined in the wrong order (assembly and then compilation), but it seems to work fine.
     compile <<= (compile in Compile) dependsOn assembly,
     resourceDirectory in Compile <<= baseDirectory(_ / "src" / "main" / "scala" / "org" / "duhemm" / "parsermacro" / "embedded")
-  )
+  ) dependsOn quasiquotes
 
 lazy val sandboxMacros: Project =
   (project in file("sandbox-macros")) settings (
@@ -57,7 +71,7 @@ lazy val sandboxMacros: Project =
   ) settings (
     publishArtifact in Compile := false,
     compile <<= (compile in Compile)
-  )
+  ) dependsOn quasiquotes
 
 lazy val sandboxClients =
   (project in file("sandbox-clients")) settings (

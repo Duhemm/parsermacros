@@ -4,6 +4,11 @@ import scala.meta.dialects.Scala211
 import scala.meta.internal.ast
 import scala.language.experimental.macros
 
+object ShowQuasiquotes extends App {
+  import tokenquasiquotes._
+  println(toks"hello, world!")
+}
+
 object A {
   object Nested {
     def miniMacro(tokens: Seq[Token]): Tree = ast.Lit.Int(5)
