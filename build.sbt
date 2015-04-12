@@ -14,6 +14,16 @@ lazy val sharedSettings: Seq[Setting[_]] = Seq(
   }
 )
 
+lazy val testSettings: Seq[Setting[_]] = Seq(
+  libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+  libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.12.2" % "test",
+  fullClasspath in Test := {
+    val testcp = (fullClasspath in Test).value.files.map(_.getAbsolutePath).mkString(java.io.File.pathSeparatorChar.toString)
+    sys.props("sbt.class.directory") = testcp
+    (fullClasspath in Test).value
+  }
+)
+
 val pluginJarName = "fat-plugin.jar"
 
 lazy val usePluginSettings = Seq(
@@ -38,7 +48,7 @@ lazy val quasiquotesMacros: Project =
 
 lazy val quasiquotes: Project =
   (project in file("quasiquotes")) settings (
-    sharedSettings: _*
+    sharedSettings ++ testSettings: _*
   ) settings (
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
   ) aggregate quasiquotesMacros dependsOn quasiquotesMacros
@@ -84,14 +94,7 @@ lazy val sandboxClients =
 
 lazy val tests =
   (project in file("tests")) settings (
-    sharedSettings ++ usePluginSettings: _*
+    sharedSettings ++ usePluginSettings ++ testSettings: _*
   ) settings (
-    libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _),
-    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test",
-    libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.12.2" % "test",
-    fullClasspath in Test := {
-      val testcp = (fullClasspath in Test).value.files.map(_.getAbsolutePath).mkString(java.io.File.pathSeparatorChar.toString)
-      sys.props("sbt.class.directory") = testcp
-      (fullClasspath in Test).value
-    }
+    libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _)
   ) dependsOn plugin
