@@ -72,7 +72,12 @@ lazy val plugin: Project =
     // depends on scala.meta, which must therefore be available when the plugin is run.
     // It looks like this task is defined in the wrong order (assembly and then compilation), but it seems to work fine.
     compile <<= (compile in Compile) dependsOn assembly,
-    resourceDirectory in Compile <<= baseDirectory(_ / "src" / "main" / "scala" / "org" / "duhemm" / "parsermacro" / "embedded")
+    resourceDirectory in Compile <<= baseDirectory(_ / "src" / "main" / "scala" / "org" / "duhemm" / "parsermacro" / "embedded"),
+    initialCommands in console := """
+      import scala.meta._
+      import scala.meta.dialects.Scala211
+      import scala.meta.tokenquasiquotes._
+    """
   ) dependsOn quasiquotes
 
 lazy val sandboxMacros: Project =
