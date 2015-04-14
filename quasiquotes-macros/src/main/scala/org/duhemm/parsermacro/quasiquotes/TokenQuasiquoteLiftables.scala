@@ -19,7 +19,7 @@ trait TokenQuasiquoteLiftables extends AdtLiftables {
         q"""new _root_.scala.meta.Dialect {
              override def toString = ${other.toString}
              def bindToSeqWildcardDesignator = ${other.bindToSeqWildcardDesignator}
-             def allowEllipses = true
+             def allowEllipses = ${other.allowEllipses}
            }"""
     }
   }
