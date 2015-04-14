@@ -11,6 +11,13 @@ abstract class TokenQuasiquoteSuite extends FunSuite {
       case _        => false
     }
 
+    def isMinus: Boolean = t isIdentNamed "-"
+
+    def isIntValued(expected: Int): Boolean = t match {
+      case t: Literal.Int => t.value(t.prev.isMinus) == expected
+      case _              => false
+    }
+
     def isWhitespace: Boolean = t.isInstanceOf[Whitespace]
 
     def isComma: Boolean = t.isInstanceOf[`,`]

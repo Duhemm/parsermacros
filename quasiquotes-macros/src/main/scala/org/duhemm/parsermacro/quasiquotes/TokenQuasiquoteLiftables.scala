@@ -3,11 +3,13 @@ package org.duhemm.parsermacro.quasiquotes
 import org.scalameta.adt.{ Liftables => AdtLiftables }
 
 import scala.reflect.macros.blackbox.Context
+import scala.reflect.macros.Universe
 
 import scala.meta.{ Dialect, Input, Token }
 
 trait TokenQuasiquoteLiftables extends AdtLiftables {
-  val u: scala.reflect.macros.Universe
+  val u: Universe
+  val c: Context
 
   import u._
 
@@ -28,9 +30,8 @@ trait TokenQuasiquoteLiftables extends AdtLiftables {
     q"new _root_.scala.meta.Input { val content: _root_.scala.Array[_root_.scala.Char] = ${new String(input.content)}.toArray }"
   }
 
-  implicit def liftBool2T[T: Liftable]: Liftable[Boolean => T] = Liftable[Boolean => T] { f =>
-    val tpe = weakTypeOf[T]
-    q"(x: $tpe) => if (x) ${f(true)} else ${f(false)}"
+  implicit def liftBool2T[T : c.WeakTypeTag : Liftable]: Liftable[Boolean => T] = Liftable[Boolean => T] { f =>
+    q"(x: Boolean) => if (x) ${f(true)} else ${f(false)}"
   }
 
   implicit def liftToken: Liftable[Token] = materializeAdt[Token]

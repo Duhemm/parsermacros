@@ -20,4 +20,17 @@ class SimpleTokenQuasiquoteSuite extends TokenQuasiquoteSuite {
       _ isIdentNamed "!"
     )
   }
+
+  test("Integers should be correctly tokenized") {
+    toks"123" shouldConformTo (
+      _ isIntValued 123
+    )
+  }
+
+  test("Negative integers should be correctly tokenized") {
+    toks"-123" shouldConformTo (
+      _.isMinus,
+      _ isIntValued -123
+    )
+  }
 }
