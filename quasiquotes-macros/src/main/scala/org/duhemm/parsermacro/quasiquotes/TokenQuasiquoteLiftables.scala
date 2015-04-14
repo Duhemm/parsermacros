@@ -31,7 +31,7 @@ trait TokenQuasiquoteLiftables extends AdtLiftables {
   }
 
   implicit def liftBool2T[T : c.WeakTypeTag : Liftable]: Liftable[Boolean => T] = Liftable[Boolean => T] { f =>
-    q"(x: Boolean) => if (x) ${f(true)} else ${f(false)}"
+    q"(x: _root_.scala.Boolean) => if (x) ${f(true)} else ${f(false)}"
   }
 
   implicit def liftToken: Liftable[Token] = materializeAdt[Token]
