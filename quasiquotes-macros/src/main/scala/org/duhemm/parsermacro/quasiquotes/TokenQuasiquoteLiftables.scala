@@ -25,23 +25,12 @@ trait TokenQuasiquoteLiftables extends AdtLiftables {
   }
 
   implicit lazy val liftInput: Liftable[Input] = Liftable[Input] { input =>
-    q"new _root_.scala.meta.Input { val content: _root_.scala.Array[_root_.scala.Char] = ${input.content} }"
+    q"new _root_.scala.meta.Input { val content: _root_.scala.Array[_root_.scala.Char] = ${new String(input.content)}.toArray }"
   }
 
-  implicit lazy val liftBool2Double: Liftable[Boolean => Double] = Liftable[Boolean => Double] { f =>
-    q"(x: _root_.scala.Boolean) => if (x) ${f(true)} else ${f(false)}"
-  }
-
-  implicit lazy val liftBool2Int: Liftable[Boolean => Int] = Liftable[Boolean => Int] { f =>
-    q"(x: _root_.scala.Boolean) => if (x) ${f(true)} else ${f(false)}"
-  }
-
-  implicit lazy val liftBool2Float: Liftable[Boolean => Float] = Liftable[Boolean => Float] { f =>
-    q"(x: _root_.scala.Boolean) => if (x) ${f(true)} else ${f(false)}"
-  }
-
-  implicit lazy val liftBool2Long: Liftable[Boolean => Long] = Liftable[Boolean => Long] { f =>
-    q"(x: _root_.scala.Boolean) => if (x) ${f(true)} else ${f(false)}"
+  implicit def liftBool2T[T: Liftable]: Liftable[Boolean => T] = Liftable[Boolean => T] { f =>
+    val tpe = weakTypeOf[T]
+    q"(x: $tpe) => if (x) ${f(true)} else ${f(false)}"
   }
 
   implicit def liftToken: Liftable[Token] = materializeAdt[Token]
