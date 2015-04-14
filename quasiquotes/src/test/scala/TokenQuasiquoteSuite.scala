@@ -16,7 +16,7 @@ abstract class TokenQuasiquoteSuite extends FunSuite {
     def isComma: Boolean = t.isInstanceOf[`,`]
   }
 
-  implicit class CheckTokenQuasiquote(tokens: List[Token]) {
+  implicit class CheckTokenQuasiquote(tokens: Vector[Token]) {
 
     def stripWhitespaces = tokens filterNot (_.isInstanceOf[Whitespace])
 

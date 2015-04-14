@@ -30,7 +30,7 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
     m
   }
 
-  private def parseTokens(dialect: Dialect): (List[Token], Mode) = {
+  private def parseTokens(dialect: Dialect): (Vector[Token], Mode) = {
     import c.universe._
     val (parts, args, mode) =
       c.macroApplication match {
@@ -42,7 +42,7 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
       }
 
     implicit val parsingDialect: Dialect = scala.meta.dialects.Quasiquote(dialect)
-    val tokens: List[Token] = parts flatMap { case q"${part: String}" => part.tokens }
+    val tokens: Vector[Token] = parts.toVector flatMap { case q"${part: String}" => part.tokens }
 
     if (tokens.length > 1) (tokens.tail.init, mode)
     else (tokens, mode)
