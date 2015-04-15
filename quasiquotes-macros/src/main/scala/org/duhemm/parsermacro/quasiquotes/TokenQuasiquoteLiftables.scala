@@ -30,7 +30,7 @@ trait TokenQuasiquoteLiftables extends AdtLiftables {
     q"new _root_.scala.meta.Input { val content: _root_.scala.Array[_root_.scala.Char] = ${new String(input.content)}.toArray }"
   }
 
-  implicit def liftBool2T[T : c.WeakTypeTag : Liftable]: Liftable[Boolean => T] = Liftable[Boolean => T] { f =>
+  implicit def liftBool2T[T: Liftable]: Liftable[Boolean => T] = Liftable[Boolean => T] { f =>
     q"(x: _root_.scala.Boolean) => if (x) ${f(true)} else ${f(false)}"
   }
 
