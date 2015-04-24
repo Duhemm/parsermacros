@@ -35,8 +35,8 @@ class SimpleTokenQuasiquoteSuite extends TokenQuasiquoteSuite {
   }
 
   test("Single token splicing should work") {
-    val hola  = toks"hello".head
-    val mundo = toks"world".head
+    val hola  = toks"hello"
+    val mundo = toks"world"
 
     toks"$hola, $mundo!".stripWhitespaces shouldConformTo (
       _ isIdentNamed "hello",

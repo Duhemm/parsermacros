@@ -45,8 +45,10 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
 
   override def expand(dialectTree: c.Tree): c.Tree = {
     implicit val dialect: Dialect = dialects.Quasiquote(instantiateDialect(dialectTree))
-    val tokens = trim(input.tokens)
-    q"$tokens"
+    trim(input.tokens) match {
+      case Seq(single) => q"$single"
+      case tokens      => q"$tokens"
+    }
   }
 
   // Required to make use of private members (`instantiateDialect`) defined in `ReificationMacros`

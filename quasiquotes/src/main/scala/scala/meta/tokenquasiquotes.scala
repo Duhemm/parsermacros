@@ -7,7 +7,7 @@ object tokenquasiquotes {
   implicit class XtensionQuasiquoteTokens(val ctx: StringContext) {
     object toks {
       import scala.language.experimental.macros
-      def apply(args: Any*)(implicit dialect: Dialect): Vector[Token] = macro TokenReificationMacros.apply
+      def apply(args: Any*)(implicit dialect: Dialect): Any = macro TokenReificationMacros.apply
       def unapply(scrutinee: Any)(implicit dialect: Dialect): Any = macro TokenReificationMacros.unapply
     }
   }
