@@ -1,7 +1,8 @@
 package scala.meta
 package parsermacro
 
-import scala.unchecked
+import scala.util.matching.Regex
+
 import scala.meta.{ Tree => MetaTree }
 import scala.meta.internal.quasiquotes.ReificationMacros
 import scala.reflect.macros.whitebox.Context
@@ -17,8 +18,14 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
   override def apply(args: ReflectTree*)(dialect: ReflectTree): c.Tree = expand(dialect)
   override def unapply(scrutinee: ReflectTree)(dialect: ReflectTree): c.Tree = ???
 
+  object PlaceHolder {
+    val pattern = """^\$placeholder(\d+)$""".r
+    def apply(i: Int): String = s"$$placeholder$i"
+    def unapply(token: Token): Option[Int] = pattern findFirstMatchIn token.code map (_.group(1).toInt)
+  }
+
   // Extract the interesting parts of toks"..."
-  private lazy val q"$_($_.apply(..${parts: List[String]})).$_.$method[..$_](..$args)($_)" = c.macroApplication
+  lazy val q"$_($_.apply(..${parts: List[String]})).$_.$method[..$_](..$args)($_)" = c.macroApplication
 
   /** Removes the heading BOF and trailing EOF from a sequence of tokens */
   private def trim(toks: Vector[Token]): Vector[Token] = toks match {
@@ -26,9 +33,19 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
     case _                                => toks
   }
 
+  /**
+   * Construct a single string from all the parts of the input, and insert `$placeholderX`
+   * where `X` is the number of the argument. This placeholder will then be replaced by
+   * some value, or extracted from a sequence of tokens.
+   */
+  private def input: String =
+    parts.init.zipWithIndex.map {
+      case (part, i) => part + PlaceHolder(i)
+    }.mkString("", "", parts.last)
+
   override def expand(dialectTree: c.Tree): c.Tree = {
     implicit val dialect: Dialect = dialects.Quasiquote(instantiateDialect(dialectTree))
-    val tokens = trim(parts.head.tokens)
+    val tokens = trim(input.tokens)
     q"$tokens"
   }
 

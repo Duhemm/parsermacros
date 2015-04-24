@@ -7,9 +7,9 @@ import scala.reflect.macros.Universe
 
 import scala.meta.{ Dialect, Input, Token }
 
-trait TokenQuasiquoteLiftables extends AdtLiftables {
-  val u: Universe
-  val c: Context
+import scala.meta.parsermacro.TokenReificationMacros
+
+trait TokenQuasiquoteLiftables extends AdtLiftables { self: TokenReificationMacros =>
 
   import u._
 
@@ -34,7 +34,16 @@ trait TokenQuasiquoteLiftables extends AdtLiftables {
     q"(x: _root_.scala.Boolean) => if (x) ${f(true)} else ${f(false)}"
   }
 
-  implicit def liftToken: Liftable[Token] = materializeAdt[Token]
+  /**
+   * Liftable for `Token`. If this token represents a placeholder that is, if it is a token
+   * introduced to fill a hole in a token quasiquote, then we will simply lift it as its actual
+   * value (that is, the value given to the token quasiquote). Otherwise we rely on scala.meta's
+   * Liftable infrastructure.
+   */
+  implicit lazy val liftToken: Liftable[Token] = Liftable {
+    case PlaceHolder(i) => args(i)
+    case other          => materializeAdt[Token](other)
+  }
 
   // This liftable is here only because it is required by the Liftables infrastructure.
   // (Unquote has a member of type `Any`)
