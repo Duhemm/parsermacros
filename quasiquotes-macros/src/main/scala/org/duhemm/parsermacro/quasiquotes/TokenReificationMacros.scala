@@ -12,40 +12,32 @@ import org.duhemm.parsermacro.quasiquotes.TokenQuasiquoteLiftables
 
 class TokenReificationMacros(override val c: Context) extends ReificationMacros(c) with TokenQuasiquoteLiftables {
 
-  import c.universe.{ Tree => ReflectTree }
+  import c.universe.{ Tree => ReflectTree, _ }
 
   override def apply(args: ReflectTree*)(dialect: ReflectTree): c.Tree = expand(dialect)
   override def unapply(scrutinee: ReflectTree)(dialect: ReflectTree): c.Tree = ???
 
-  override def expand(dialect: ReflectTree): ReflectTree = {
-    val (tokens, mode) = parseTokens(instantiateDialect(dialect))
-    import c.universe._
+  // Extract the interesting parts of toks"..."
+  private lazy val q"$_($_.apply(..${parts: List[String]})).$_.$method[..$_](..$args)($_)" = c.macroApplication
+
+  /** Removes the heading BOF and trailing EOF from a sequence of tokens */
+  private def trim(toks: Vector[Token]): Vector[Token] = toks match {
+    case (_: Token.BOF) +: tokens :+ (_: Token.EOF) => tokens
+    case _                                => toks
+  }
+
+  override def expand(dialectTree: c.Tree): c.Tree = {
+    implicit val dialect: Dialect = dialects.Quasiquote(instantiateDialect(dialectTree))
+    val tokens = trim(parts.head.tokens)
     q"$tokens"
   }
 
+  // Required to make use of private members (`instantiateDialect`) defined in `ReificationMacros`
   private val parentClass = classOf[ReificationMacros]
   private def getAndSetAccessible(meth: String): Method = {
     val m = parentClass.getDeclaredMethods.filter(_.getName == meth).headOption.getOrElse(parentClass.getDeclaredMethods.filter(_.getName endsWith meth).head)
     m.setAccessible(true)
     m
-  }
-
-  private def parseTokens(dialect: Dialect): (Vector[Token], Mode) = {
-    import c.universe._
-    val (parts, args, mode) =
-      c.macroApplication match {
-        case q"$_($_.apply(..$parts)).$_.apply[..$_](..$args)($_)" =>
-          (parts, args, Mode.Term)
-
-        case _ =>
-          c.abort(c.macroApplication.pos, "Token quasiquotes can only be used for term construction at the moment.")
-      }
-
-    implicit val parsingDialect: Dialect = scala.meta.dialects.Quasiquote(dialect)
-    val tokens: Vector[Token] = parts.toVector flatMap { case q"${part: String}" => part.tokens }
-
-    if (tokens.length > 1) (tokens.tail.init, mode)
-    else (tokens, mode)
   }
 
   private val instantiateDialect: ReflectTree => Dialect = {
