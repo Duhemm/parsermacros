@@ -6,6 +6,7 @@ import scala.reflect.macros.blackbox.Context
 import scala.reflect.macros.Universe
 
 import scala.meta.{ Dialect, Input, Token }
+import scala.meta.internal.ast.Lit
 
 import scala.meta.parsermacro.TokenReificationMacros
 
@@ -41,8 +42,8 @@ trait TokenQuasiquoteLiftables extends AdtLiftables { self: TokenReificationMacr
    * Liftable infrastructure.
    */
   implicit lazy val liftToken: Liftable[Token] = Liftable {
-    case PlaceHolder(i) => args(i)
-    case other          => materializeAdt[Token](other)
+    case Token.Unquote(_, _, _, _, _, Lit.Int(i), _) => args(i)
+    case other                                       => materializeAdt[Token](other)
   }
 
   // This liftable is here only because it is required by the Liftables infrastructure.

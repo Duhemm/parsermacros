@@ -4,6 +4,7 @@ package parsermacro
 import scala.util.matching.Regex
 
 import scala.meta.{ Tree => MetaTree }
+import scala.meta.internal.ast.Lit
 import scala.meta.internal.quasiquotes.ReificationMacros
 import scala.reflect.macros.whitebox.Context
 
@@ -18,12 +19,6 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
   override def apply(args: ReflectTree*)(dialect: ReflectTree): c.Tree = expand(dialect)
   override def unapply(scrutinee: ReflectTree)(dialect: ReflectTree): c.Tree = ???
 
-  object PlaceHolder {
-    val pattern = """^\$placeholder(\d+)$""".r
-    def apply(i: Int): String = s"$$placeholder$i"
-    def unapply(token: Token): Option[Int] = pattern findFirstMatchIn token.code map (_.group(1).toInt)
-  }
-
   // Extract the interesting parts of toks"..."
   lazy val q"$_($_.apply(..${parts: List[String]})).$_.$method[..$_](..$args)($_)" = c.macroApplication
 
@@ -34,18 +29,21 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
   }
 
   /**
-   * Construct a single string from all the parts of the input, and insert `$placeholderX`
-   * where `X` is the number of the argument. This placeholder will then be replaced by
-   * some value, or extracted from a sequence of tokens.
+   * Gets the tokens for each part of the input, and glue them together in a single Vector
+   * by inserting special `Token.Unquote` tokens between them.
+   * The tree of the Unquote token is a scala.meta tree that represents the index of the
+   * argument.
    */
-  private def input: String =
-    parts.init.zipWithIndex.map {
-      case (part, i) => part + PlaceHolder(i)
-    }.mkString("", "", parts.last)
+  private def input(implicit dialect: Dialect): Vector[Token] =
+    parts.toVector.init.zipWithIndex.flatMap {
+      case (part, i) =>
+        trim(part.tokens) :+ Token.Unquote(Input.None, dialect, 0, 0, 0, Lit.Int(i), Token.Prototype.None)
+    } ++ trim(parts.last.tokens)
+
 
   override def expand(dialectTree: c.Tree): c.Tree = {
     implicit val dialect: Dialect = dialects.Quasiquote(instantiateDialect(dialectTree))
-    trim(input.tokens) match {
+    input match {
       case Seq(single) => q"$single"
       case tokens      => q"$tokens"
     }
