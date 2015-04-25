@@ -36,10 +36,10 @@ trait TokenQuasiquoteLiftables extends AdtLiftables { self: TokenReificationMacr
   }
 
   /**
-   * Liftable for `Token`. If this token represents a placeholder that is, if it is a token
-   * introduced to fill a hole in a token quasiquote, then we will simply lift it as its actual
-   * value (that is, the value given to the token quasiquote). Otherwise we rely on scala.meta's
-   * Liftable infrastructure.
+   * Liftable for `Token`. `Token.Unquote` is only inserted to glue together different parts of
+   * input. For instance in `toks"foo $bar foo"`, the input will consist of 2 parts and one argument.
+   * The two parts will be glued by a `Token.Unquote` token, which will be replaced here by the value
+   * of the argument when the tokens get lifted.
    */
   implicit lazy val liftToken: Liftable[Token] = Liftable {
     case Token.Unquote(_, _, _, _, _, Lit.Int(i), _) => args(i)
@@ -49,7 +49,7 @@ trait TokenQuasiquoteLiftables extends AdtLiftables { self: TokenReificationMacr
   // This liftable is here only because it is required by the Liftables infrastructure.
   // (Unquote has a member of type `Any`)
   private[quasiquotes] implicit lazy val liftAny: Liftable[Any] = Liftable[Any] { any =>
-    ???
+    c.abort(c.macroApplication.pos, "Internal error in token quasiquote expansion: Should not try to lift scala.Any.")
   }
 
 }
