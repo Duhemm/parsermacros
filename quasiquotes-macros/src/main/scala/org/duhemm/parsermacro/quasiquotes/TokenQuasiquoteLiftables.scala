@@ -42,8 +42,32 @@ trait TokenQuasiquoteLiftables extends AdtLiftables { self: TokenReificationMacr
    * of the argument when the tokens get lifted.
    */
   implicit lazy val liftToken: Liftable[Token] = Liftable {
-    case Token.Unquote(_, _, _, _, _, Lit.Int(i), _) => args(i)
-    case other                                       => materializeAdt[Token](other)
+    case Token.Unquote(_, _, _, _, _, arg: Tree, _) => arg
+    case other                                      => materializeAdt[Token](other)
+  }
+
+  implicit def liftTokens: Liftable[Vector[Token]] = Liftable { tokens =>
+    def prepend(tokens: Vector[Token], t: Tree): Tree =
+      (tokens foldRight t) { case (token, acc) => q"$token +: $acc" }
+
+    def append(t: Tree, tokens: Vector[Token]): Tree =
+      // We call insert tokens again because there may be things that need to be spliced in it
+      q"$t ++ ${insertTokens(tokens)}"
+
+    def insertTokens(tokens: Vector[Token]): Tree = {
+      val (pre, middle) = tokens span (!_.is[Token.Unquote])
+      middle match {
+        case Vector() =>
+          prepend(pre, q"Vector.empty")
+        case Token.Unquote(_, _, _, _, _, arg: Tree, _) +: rest =>
+          // If we are splicing only a single token we need to wrap it in a Vector
+          // to be able to append and prepend other tokens to it easily.
+          val quoted = if (arg.tpe <:< typeOf[Token]) q"Vector($arg)" else arg
+          append(prepend(pre, quoted), rest)
+      }
+    }
+
+    insertTokens(tokens)
   }
 
   // This liftable is here only because it is required by the Liftables infrastructure.

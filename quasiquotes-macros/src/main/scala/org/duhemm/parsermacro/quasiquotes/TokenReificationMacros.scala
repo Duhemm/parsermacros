@@ -20,7 +20,7 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
   override def unapply(scrutinee: ReflectTree)(dialect: ReflectTree): c.Tree = ???
 
   // Extract the interesting parts of toks"..."
-  lazy val q"$_($_.apply(..${parts: List[String]})).$_.$method[..$_](..$args)($_)" = c.macroApplication
+  private lazy val q"$_($_.apply(..${parts: List[String]})).$_.$method[..$_](..$args)($_)" = c.macroApplication
 
   /** Removes the heading BOF and trailing EOF from a sequence of tokens */
   private def trim(toks: Vector[Token]): Vector[Token] = toks match {
@@ -37,7 +37,7 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
   private def input(implicit dialect: Dialect): Vector[Token] =
     parts.toVector.init.zipWithIndex.flatMap {
       case (part, i) =>
-        trim(part.tokens) :+ Token.Unquote(Input.None, dialect, 0, 0, 0, Lit.Int(i), Token.Prototype.None)
+        trim(part.tokens) :+ Token.Unquote(Input.None, dialect, 0, 0, 0, args(i), Token.Prototype.None)
     } ++ trim(parts.last.tokens)
 
 

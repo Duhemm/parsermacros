@@ -45,4 +45,47 @@ class SimpleTokenQuasiquoteSuite extends TokenQuasiquoteSuite {
       _ isIdentNamed "!"
     )
   }
+
+  test("Multiple token splicing should work") {
+    val insertMe = toks"ipsum dolor sit"
+
+    insertMe.stripWhitespaces shouldConformTo (
+      _ isIdentNamed "ipsum",
+      _ isIdentNamed "dolor",
+      _ isIdentNamed "sit"
+    )
+
+    toks"lorem $insertMe amet".stripWhitespaces shouldConformTo (
+      _ isIdentNamed "lorem",
+      _ isIdentNamed "ipsum",
+      _ isIdentNamed "dolor",
+      _ isIdentNamed "sit",
+      _ isIdentNamed "amet"
+    )
+  }
+
+  test("Splicing multiple tokens at multiple locations") {
+    val insertMe1 = toks"My first program"
+    val insertMe2 = toks"hello world"
+
+    toks"$insertMe1 said $insertMe2".stripWhitespaces shouldConformTo (
+      _ isIdentNamed "My",
+      _ isIdentNamed "first",
+      _ isIdentNamed "program",
+      _ isIdentNamed "said",
+      _ isIdentNamed "hello",
+      _ isIdentNamed "world"
+    )
+  }
+
+  test("Token quasiquotes inside token quasiquotes") {
+    toks"""token quasiquotes ${toks"are awesome"}!""".stripWhitespaces shouldConformTo (
+      _ isIdentNamed "token",
+      _ isIdentNamed "quasiquotes",
+      _ isIdentNamed "are",
+      _ isIdentNamed "awesome",
+      _ isIdentNamed "!"
+    )
+  }
+
 }
