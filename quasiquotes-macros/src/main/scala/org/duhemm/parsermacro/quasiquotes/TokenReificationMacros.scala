@@ -12,12 +12,20 @@ import java.lang.reflect.Method
 
 import org.duhemm.parsermacro.quasiquotes.TokenQuasiquoteLiftables
 
+/**
+ * Object used to extract the underlying code for each token.
+ * Two tokens are considered equals (in pattern matching) if they both come the same code.
+ */
+object TokenExtractor {
+  def unapply(t: Token) = Some(t.code)
+}
+
 class TokenReificationMacros(override val c: Context) extends ReificationMacros(c) with TokenQuasiquoteLiftables {
 
   import c.universe.{ Tree => ReflectTree, _ }
 
   override def apply(args: ReflectTree*)(dialect: ReflectTree): c.Tree = expand(dialect)
-  override def unapply(scrutinee: ReflectTree)(dialect: ReflectTree): c.Tree = ???
+  override def unapply(scrutinee: ReflectTree)(dialect: ReflectTree): c.Tree = expand(dialect)
 
   // Extract the interesting parts of toks"..."
   private lazy val q"$_($_.apply(..${parts: List[String]})).$_.$method[..$_](..$args)($_)" = c.macroApplication
@@ -43,9 +51,24 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
 
   override def expand(dialectTree: c.Tree): c.Tree = {
     implicit val dialect: Dialect = dialects.Quasiquote(instantiateDialect(dialectTree))
-    input match {
-      case Seq(single) => q"$single"
-      case tokens      => q"$tokens"
+
+    method match {
+      case TermName("apply") =>
+        input match {
+          case Seq(single) => q"$single"
+          case tokens      => q"$tokens"
+        }
+
+      case TermName("unapply") =>
+        val pattern = input map (t => pq"_root_.scala.meta.parsermacro.TokenExtractor(${t.code})")
+        q"""
+        new {
+          def unapply(in: Vector[_root_.scala.meta.Token]) = in match {
+            case _root_.scala.collection.immutable.Vector(..$pattern) => true
+            case _                                                    => false
+          }
+        }.unapply(..$args)
+        """
     }
   }
 

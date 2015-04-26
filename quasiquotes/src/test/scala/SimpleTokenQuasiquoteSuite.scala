@@ -88,4 +88,15 @@ class SimpleTokenQuasiquoteSuite extends TokenQuasiquoteSuite {
     )
   }
 
+  test("Simple pattern matching should work") {
+    val toks"hello world" = toks"hello world"
+  }
+
+  test("Pattern matching should only match actually matching tokens") {
+    toks"hello world" match {
+      case toks"hola mundo" => fail("Should not have matched this")
+      case toks"hello world" => ()
+    }
+  }
+
 }
