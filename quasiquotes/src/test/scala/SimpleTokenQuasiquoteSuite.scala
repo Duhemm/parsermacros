@@ -105,4 +105,12 @@ class SimpleTokenQuasiquoteSuite extends TokenQuasiquoteSuite {
     assert(world isIdentNamed "mundo")
   }
 
+  test("Pattern extraction with types specified") {
+    import scala.meta.Token
+    val toks"${hello: Token.Ident} ${world: Token.Ident} ${number: Token.Literal.Int}" = toks"hola mundo 123"
+    assert(hello isIdentNamed "hola")
+    assert(world isIdentNamed "mundo")
+    assert(number isIntValued 123)
+  }
+
 }
