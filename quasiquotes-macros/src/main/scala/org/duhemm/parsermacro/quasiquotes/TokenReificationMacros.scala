@@ -36,6 +36,15 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
     case _                                => toks
   }
 
+  private def arg(i: Int): c.Tree = method match {
+    case TermName("apply") =>
+      args(i)
+
+    case TermName("unapply") =>
+      val name = TermName(s"x$i")
+      pq"$name @ _"
+  }
+
   /**
    * Gets the tokens for each part of the input, and glue them together in a single Vector
    * by inserting special `Token.Unquote` tokens between them.
@@ -45,7 +54,7 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
   private def input(implicit dialect: Dialect): Vector[Token] =
     parts.toVector.init.zipWithIndex.flatMap {
       case (part, i) =>
-        trim(part.tokens) :+ Token.Unquote(Input.None, dialect, 0, 0, 0, args(i), Token.Prototype.None)
+        trim(part.tokens) :+ Token.Unquote(Input.None, dialect, 0, 0, 0, arg(i), Token.Prototype.None)
     } ++ trim(parts.last.tokens)
 
 
@@ -60,14 +69,30 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
         }
 
       case TermName("unapply") =>
-        val pattern = input map (t => pq"_root_.scala.meta.parsermacro.TokenExtractor(${t.code})")
-        q"""
-        new {
-          def unapply(in: Vector[_root_.scala.meta.Token]) = in match {
-            case _root_.scala.collection.immutable.Vector(..$pattern) => true
-            case _                                                    => false
+
+        def patternForToken(t: Token) = t match {
+          case t: Token.Unquote => pq"${t.tree.asInstanceOf[c.Tree]}"
+          case t                => pq"_root_.scala.meta.parsermacro.TokenExtractor(${t.code})"
+        }
+
+        val pattern = (input.tail foldLeft pq"Vector(${patternForToken(input.head)})") {
+          case (pq"Vector(..$p)", t) => pq"Vector(..$p, ${patternForToken(t)})"
+        }
+
+        val (thenp, elsep) =
+          if (parts.size == 1) (q"true", q"false")
+          else {
+            val bindings = parts.init.zipWithIndex map { case (_, i) => val name = TermName(s"x$i") ; q"$name" }
+            (q"_root_.scala.Some(..$bindings)", q"_root_.scala.None")
           }
-        }.unapply(..$args)
+
+        q"""
+          new {
+            def unapply(in: Vector[_root_.scala.meta.Token]) = in match {
+              case $pattern => $thenp
+              case _        => $elsep
+            }
+          }.unapply(..$args)
         """
     }
   }

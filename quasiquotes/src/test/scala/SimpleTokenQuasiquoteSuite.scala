@@ -99,4 +99,10 @@ class SimpleTokenQuasiquoteSuite extends TokenQuasiquoteSuite {
     }
   }
 
+  test("Pattern extraction should world") {
+    val toks"$hello $world" = toks"hola mundo"
+    assert(hello isIdentNamed "hola")
+    assert(world isIdentNamed "mundo")
+  }
+
 }
