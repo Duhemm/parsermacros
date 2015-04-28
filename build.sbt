@@ -5,13 +5,7 @@ lazy val sharedSettings: Seq[Setting[_]] = Seq(
   resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
   libraryDependencies += "org.scalameta" %% "scalameta" % "0.1.0-SNAPSHOT",
   libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
-  scalaHome := {
-    System getProperty scalaHomeProperty match {
-      case null =>
-        None
-      case scalaHome => Some(file(scalaHome))
-    }
-  }
+  scalaHome := Option(System getProperty scalaHomeProperty) map file
 )
 
 lazy val testSettings: Seq[Setting[_]] = Seq(
