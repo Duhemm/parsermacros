@@ -14,7 +14,7 @@ import org.duhemm.parsermacro.quasiquotes.TokenQuasiquoteLiftables
 
 /**
  * Object used to extract the underlying code for each token.
- * Two tokens are considered equals (in pattern matching) if they both come the same code.
+ * Two tokens are considered equal (in pattern matching) if they both come the same code.
  */
 object TokenExtractor {
   def unapply(t: Token) = Some(t.code)
@@ -69,15 +69,68 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
         }
 
       case TermName("unapply") =>
+        def countEllipsisUnquote(toks: Vector[Token]): Int = toks match {
+          case (_: Token.Ellipsis) +: (_: Token.Unquote) +: rest =>
+            1 + countEllipsisUnquote(rest)
+          case other +: rest =>
+            countEllipsisUnquote(rest)
+          case _ =>
+            0
+        }
+
+        if (countEllipsisUnquote(input) > 1) {
+          c.abort(c.macroApplication.pos, "Cannot use ellipsis-unquote more than once.")
+        }
 
         def patternForToken(t: Token) = t match {
           case t: Token.Unquote => pq"${t.tree.asInstanceOf[c.Tree]}"
           case t                => pq"_root_.scala.meta.parsermacro.TokenExtractor(${t.code})"
         }
 
-        val pattern = (input.tail foldLeft pq"Vector(${patternForToken(input.head)})") {
-          case (pq"Vector(..$p)", t) => pq"Vector(..$p, ${patternForToken(t)})"
+        val splitted = {
+          def split(toks: Vector[Token]): (Vector[Token], Option[Token], Vector[Token]) = toks match {
+            case (_: Token.Ellipsis) +: (u: Token.Unquote) +: rest =>
+              (Vector(), Some(u), rest)
+
+            case t +: rest =>
+              val (before, middle, after) = split(rest)
+              (t +: before, middle, after)
+
+            case Vector() =>
+              (Vector(), None, Vector())
+          }
+
+          split(input)
         }
+
+        val pattern =
+          splitted match {
+            case (Vector(), Some(middle), Vector()) =>
+              patternForToken(middle)
+
+            case (before, None, _) =>
+              val subPatterns = before map patternForToken
+              q"Vector(..$subPatterns)"
+
+            case (before, Some(middle), Vector()) =>
+              val beforePatterns = before map patternForToken
+              (beforePatterns foldRight patternForToken(middle)) {
+                case (pat, acc) => pq"$pat +: $acc"
+              }
+
+            case (before, Some(middle), after) =>
+              val beforePatterns = before map patternForToken
+              val afterPatterns  = after map patternForToken
+
+              val withBeforePatterns = (beforePatterns foldRight patternForToken(middle)) {
+                case (pat, acc) => pq"$pat +: $acc"
+              }
+
+              (afterPatterns foldLeft withBeforePatterns) {
+                case (acc, pat) => pq"$acc :+ $pat"
+              }
+
+          }
 
         val (thenp, elsep) =
           if (parts.size == 1) (q"true", q"false")

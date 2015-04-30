@@ -113,4 +113,53 @@ class SimpleTokenQuasiquoteSuite extends TokenQuasiquoteSuite {
     assert(number isIntValued 123)
   }
 
+  test("Extracting only with an ellipsis should world") {
+    val toks"..$tokens" = toks"hello, world!"
+    tokens.stripWhitespaces shouldConformTo (
+      _ isIdentNamed "hello",
+      _.isComma,
+      _ isIdentNamed "world",
+      _ isIdentNamed "!"
+    )
+  }
+
+  test("Extracting using an ellipsis at the beginning should work") {
+    val toks"..$beginning world!" = toks"hello, world!"
+    beginning shouldConformTo (
+      _ isIdentNamed "hello",
+      _.isComma
+    )
+  }
+
+  test("Extracting using an ellipsis in the middle should work") {
+    val toks"my ..$words work" = toks"my implementation appears to work"
+    words.stripWhitespaces shouldConformTo (
+      _ isIdentNamed "implementation",
+      _ isIdentNamed "appears",
+      _ isIdentNamed "to"
+    )
+  }
+
+  test("Extracting using an ellipsis in the end should work") {
+    val toks"hello ..$rest" = toks"hello wonderful world!"
+    rest.stripWhitespaces shouldConformTo (
+      _ isIdentNamed "wonderful",
+      _ isIdentNamed "world",
+      _ isIdentNamed "!"
+    )
+  }
+
+  test("Extracting using an ellipsis and normal unquotes should work") {
+    val toks"I am ..$activity using $what, and it $result!" = toks"I am testing the extraction of tokens using ellipsis, and it works!"
+    activity.stripWhitespaces shouldConformTo (
+      _ isIdentNamed "testing",
+      _ isIdentNamed "the",
+      _ isIdentNamed "extraction",
+      _ isIdentNamed "of",
+      _ isIdentNamed "tokens"
+    )
+    assert(what isIdentNamed "ellipsis")
+    assert(result isIdentNamed "works")
+  }
+
 }
