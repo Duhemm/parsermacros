@@ -14,6 +14,32 @@ import scala.tools.nsc.reporters.AbstractReporter
 object Compiler {
 
   case class CompilationFailed(msg: String) extends Exception(msg)
+
+  /**
+   * Compiles the given code and returns its AST.
+   */
+  def compile(code: String): Global#Tree = {
+    val global = getCompiler()
+    import global._
+    val source = new BatchSourceFile(NoFile, wrap(code))
+    val run = new Run
+    run.compileSources(source :: Nil)
+    unWrap(global)(run.units.next.body)
+  }
+
+  /**
+   * Parses the given code and returns its AST.
+   */
+  def parse(code: String, wrapped: Boolean): Global#Tree = {
+    val global = getCompiler(additionalOptions = "-Ystop-after:parser")
+    import global._
+    val source = new BatchSourceFile(NoFile, if (wrapped) wrap(code) else code)
+    val run = new Run
+    run.compileSources(source :: Nil)
+    val result = run.units.next.body
+    if (wrapped) unWrap(global)(result) else result
+  }
+
   private def reportError(error: String) = throw CompilationFailed(error)
 
   /**
@@ -35,31 +61,17 @@ object Compiler {
     s"$usePlugin $classpath"
   }
 
-  private def getCompiler: Global = {
+  private def getCompiler(additionalOptions: String = ""): Global = {
     // I don't really know how I can reset the compiler after a run, nor what else
     // should also be reset, so for now this method creates new instances of everything,
     // which is not so cool.
-    val arguments = CommandLineParser.tokenize(compilerOptions)
+    val arguments = CommandLineParser.tokenize(s"$compilerOptions $additionalOptions")
     val command = new CompilerCommand(arguments.toList, reportError _)
     val outputDir = new VirtualDirectory("(memory)", None)
     command.settings.outputDirs setSingleOutput outputDir
     val reporter = new TestReporter(command.settings)
 
     new Global(command.settings, reporter)
-  }
-
-  /**
-   * Compiles the given code and returns its representation as a String.
-   */
-  // TODO: Returning the compiled code as a String is a huge step backwards compared
-  // to using toolboxes... It would be cool to extract the tree we're interested in.
-  def compile(code: String) = {
-    val global = getCompiler
-    import global._
-    val source = new BatchSourceFile(NoFile, wrap(code))
-    val run = new Run
-    run.compileSources(source :: Nil)
-    unWrap(global)(run.units.next.body)
   }
 
   /**

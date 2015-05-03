@@ -47,12 +47,61 @@ abstract class MacroParserSuite extends FunSuite {
       }
     }
 
+    /**
+     * Verifies that the code compiles without errors
+     */
     def shouldCompile: Unit = {
       try {
         compile(code)
       } catch {
         case err @ CompilationFailed(msg) =>
         fail(s"Compilation failed but success was expected:\n$msg")
+      }
+    }
+
+    /**
+     * Verifies that the given code can be sucessfully parsed without wrapping.
+     */
+    def shouldParse: Unit =
+      shouldParse(wrapped = false)
+
+    /**
+     * Verifies that the given code can be successfully parsed after being
+     * wrapped in a class definition.
+     */
+    def shouldParseWrapped: Unit =
+      shouldParse(wrapped = true)
+
+    /**
+     * Verifies that parsing the given code issues a parsing error matching `expected`.
+     * The code is not wrapped in a class definition before parsing.
+     */
+    def shouldNotParseWith(expected: String): Unit =
+      shouldNotParseWith(expected, wrapped = false)
+
+    /**
+     * Verifies that parsing the given code issues a parsing error matching `expected`.
+     * The code is wrapped in a class definition before parsing.
+     */
+    def shouldNoParseWrappedWith(expected: String): Unit =
+      shouldNotParseWith(expected, wrapped = true)
+
+    private def shouldParse(wrapped: Boolean): Unit = {
+      try {
+        parse(code, wrapped)
+      } catch {
+        case CompilationFailed(msg) =>
+          fail(s"Parsing failed but success was expected:\n$msg")
+      }
+    }
+
+    private def shouldNotParseWith(expected: String, wrapped: Boolean): Unit = {
+      try {
+        parse(code, wrapped)
+        fail("An error was expected during the parsing, but none was issued.")
+      } catch {
+        case CompilationFailed(msg) =>
+          assert(msg contains expected)
       }
     }
   }

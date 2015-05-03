@@ -33,10 +33,24 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer { self =>
     override def withPatches(patches: List[BracePatch]): UnitParser = new UnitParser(unit, patches)
     override def newScanner() = new UnitScanner(unit, patches)
 
-    override def simpleExprRest(t: Tree, canApply: Boolean): Tree = {
-      if (canApply) newLineOptWhenFollowedBy(LBRACE)
+    override def topStat: PartialFunction[Token, List[Tree]] = {
+      case _ if isIdent =>
+        parserMacro :: Nil
+      case t if super.topStat isDefinedAt t =>
+        super.topStat(t)
+      case _ =>
+        syntaxErrorOrIncompleteAnd("expected class or object definition", skipIt = true)(Nil)
+    }
+
+    private def parserMacro: Tree = {
+      val base = qualId()
+      if (in.token == DOT) parserMacroApplication(selectors(base, false, in.offset))
+      else parserMacroApplication(base)
+    }
+
+    private def parserMacroApplication(t: Tree): Tree = {
       in.token match {
-        case HASH if (canApply) =>
+        case HASH =>
           val macroParserArgs = new ListBuffer[String]
           while(in.token == HASH) {
             in.nextToken()
@@ -56,6 +70,17 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer { self =>
           }
           t updateAttachment ParserMacroArgumentsAttachment(macroParserArgs.toList)
 
+        case other =>
+          syntaxErrorOrIncompleteAnd(s"'#' expected but ${token2string(other)} found.", skipIt = true)(EmptyTree)
+
+      }
+    }
+
+    override def simpleExprRest(t: Tree, canApply: Boolean): Tree = {
+      if (canApply) newLineOptWhenFollowedBy(LBRACE)
+      in.token match {
+        case HASH if (canApply) =>
+          parserMacroApplication(t)
         case _ =>
           super.simpleExprRest(t, canApply)
       }
