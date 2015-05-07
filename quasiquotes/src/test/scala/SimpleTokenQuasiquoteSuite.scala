@@ -23,14 +23,14 @@ class SimpleTokenQuasiquoteSuite extends TokenQuasiquoteSuite {
 
   test("Integers should be correctly tokenized") {
     toks"123" shouldConformTo (
-      _ isIntValued 123
+      _ isIntLit 123
     )
   }
 
   test("Negative integers should be correctly tokenized") {
     toks"-123" shouldConformTo (
       _.isMinus,
-      _ isIntValued -123
+      _ isIntLit 123 // The second token taken alone is 123
     )
   }
 
@@ -110,7 +110,7 @@ class SimpleTokenQuasiquoteSuite extends TokenQuasiquoteSuite {
     val toks"${hello: Token.Ident} ${world: Token.Ident} ${number: Token.Literal.Int}" = toks"hola mundo 123"
     assert(hello isIdentNamed "hola")
     assert(world isIdentNamed "mundo")
-    assert(number isIntValued 123)
+    assert(number isIntLit 123)
   }
 
   test("Extracting only with an ellipsis should world") {

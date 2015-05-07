@@ -2,7 +2,7 @@ import org.scalatest.FunSuite
 
 abstract class TokenQuasiquoteSuite extends FunSuite {
 
-  import scala.meta.Token
+  import scala.meta.{ Token, Tokens }
   import scala.meta.Token._
 
   implicit class CheckToken(t: Token) {
@@ -13,8 +13,8 @@ abstract class TokenQuasiquoteSuite extends FunSuite {
 
     def isMinus: Boolean = t isIdentNamed "-"
 
-    def isIntValued(expected: Int): Boolean = t match {
-      case t: Literal.Int => t.value(t.prev.isMinus) == expected
+    def isIntLit(expected: Int): Boolean = t match {
+      case t: Literal.Int => t.value(false) == expected
       case _              => false
     }
 
@@ -23,11 +23,11 @@ abstract class TokenQuasiquoteSuite extends FunSuite {
     def isComma: Boolean = t.isInstanceOf[`,`]
   }
 
-  implicit class checkSingleTokenQuasiquote(token: Token) extends CheckTokenQuasiquote(Vector(token))
+  implicit class checkSingleTokenQuasiquote(token: Token) extends CheckTokenQuasiquote(Tokens(token))
 
-  implicit class CheckTokenQuasiquote(tokens: Vector[Token]) {
+  implicit class CheckTokenQuasiquote(tokens: Tokens) {
 
-    def stripWhitespaces = tokens filterNot (_.isInstanceOf[Whitespace])
+    def stripWhitespaces = tokens filterNot (_.isWhitespace)
 
     def shouldConformTo(predicates: (Token => Boolean)*) {
       assert(tokens.length == predicates.length, s"Received ${tokens.length} tokens, but only ${predicates.length} predicates.")
