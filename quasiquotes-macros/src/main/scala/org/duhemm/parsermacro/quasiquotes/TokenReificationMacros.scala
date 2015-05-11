@@ -68,10 +68,7 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
 
     method match {
       case TermName("apply") =>
-        input match {
-          case Tokens(single) => q"$single"
-          case tokens         => q"$tokens"
-        }
+        q"$input"
 
       case TermName("unapply") =>
         def countEllipsisUnquote(toks: Seq[Token]): Int = toks match {
