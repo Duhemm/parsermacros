@@ -1,6 +1,15 @@
+package boxity
+
 import org.scalatest.FunSuite
-abstract class MacroParserSuite extends FunSuite {
-  import compiler.Compiler._
+import scala.tools.nsc.Global
+
+/**
+ * Common functionalities for black and whitebox parser macro tests
+ */
+trait ParserMacroSuite extends FunSuite {
+  import compiler.Compiler.{ CompilationFailed, parse }
+
+  def compile(code: String): Global#Tree
 
   implicit class CompileAndCheck(code: String) {
 
@@ -105,6 +114,4 @@ abstract class MacroParserSuite extends FunSuite {
       }
     }
   }
-
-
 }

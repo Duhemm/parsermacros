@@ -17,9 +17,15 @@ lazy val sharedSettings: Seq[Setting[_]] = Seq(
 lazy val testSettings: Seq[Setting[_]] = Seq(
   libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test",
   libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.12.2" % "test",
+  // We depend on Macro Paradise, because we need its JAR on the classpath to give it to
+  // the test compiler.
+  libraryDependencies += "org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full,
   fullClasspath in Test := {
     val testcp = (fullClasspath in Test).value.files.map(_.getAbsolutePath).mkString(java.io.File.pathSeparatorChar.toString)
     sys.props("sbt.class.directory") = testcp
+
+    val paradise = (fullClasspath in Test).value.files find (_.getName contains "paradise") map (_.getAbsolutePath) getOrElse ""
+    sys.props("sbt.path.paradise.jar") = paradise
     (fullClasspath in Test).value
   }
 )
@@ -57,6 +63,7 @@ lazy val plugin: Project =
   (project in file("plugin")) settings (
     sharedSettings: _*
   ) settings (
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full),
     libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _),
     libraryDependencies += "org.scalameta" % "scalahost" % "0.1.0-SNAPSHOT" cross CrossVersion.full,
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false, includeDependency = true),

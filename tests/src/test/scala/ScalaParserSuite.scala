@@ -1,7 +1,9 @@
+import boxity.BlackboxParserMacroSuite
+
 /**
  * These tests verify that the modified parser behaves as expected.
  */
-class ScalaParserSuite extends MacroParserSuite {
+class ScalaParserSuite extends BlackboxParserMacroSuite {
 
   test("Simple class definition should be parsed correctly") {
     "class A extends B { def foo = bar }".shouldParse

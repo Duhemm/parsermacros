@@ -1,9 +1,8 @@
-/**
- * These tests verify that all the constraints on macro implementations are
- * respected, and that the plugin behaves correctly in unexpected situations
- * (for instance when a parser macro is not given enough arguments).
- */
-class IncorrectScalaMetaMacrosSuite extends MacroParserSuite {
+package syntaxes.meta
+
+import boxity.ParserMacroSuite
+
+trait MetaIncorrectMacros extends ParserMacroSuite {
 
   test("Expansion should match the expected type") {
     // This macro returns an Int, we are assigning it to a Boolean variable
@@ -65,4 +64,5 @@ class IncorrectScalaMetaMacrosSuite extends MacroParserSuite {
       |  def hello(implicit tokens: Seq[Token]): Tree = macro { internal.ast.Lit.Int(1) }
       |}""".stripMargin shouldFailWith "parser macro cannot have implicit parameters"
   }
+
 }

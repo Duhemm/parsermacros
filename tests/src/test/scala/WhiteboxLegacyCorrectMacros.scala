@@ -1,0 +1,4 @@
+import boxity.WhiteboxParserMacroSuite
+import syntaxes.legacy.LegacyCorrectMacros
+
+class WhiteboxLegacyCorrectMacros extends WhiteboxParserMacroSuite with LegacyCorrectMacros

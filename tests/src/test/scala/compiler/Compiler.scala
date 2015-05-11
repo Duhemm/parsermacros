@@ -18,26 +18,38 @@ object Compiler {
   /**
    * Compiles the given code and returns its AST.
    */
-  def compile(code: String): Global#Tree = {
-    val global = getCompiler()
-    import global._
-    val source = new BatchSourceFile(NoFile, wrap(code))
-    val run = new Run
-    run.compileSources(source :: Nil)
-    unWrap(global)(run.units.next.body)
-  }
+  def compileBlackbox(code: String): Global#Tree =
+    compile(code, options = ParserMacro)
+
+  /**
+   * Compiles the given whitebox macro and returns its AST
+   */
+  def compileWhitebox(code: String): Global#Tree =
+    compile(code, options = Paradise, ParserMacro)
 
   /**
    * Parses the given code and returns its AST.
    */
   def parse(code: String, wrapped: Boolean): Global#Tree = {
-    val global = getCompiler(additionalOptions = "-Ystop-after:parser")
+    val global = getCompiler(options = ParserMacro, "-Ystop-after:parser")
     import global._
     val source = new BatchSourceFile(NoFile, if (wrapped) wrap(code) else code)
     val run = new Run
     run.compileSources(source :: Nil)
     val result = run.units.next.body
     if (wrapped) unWrap(global)(result) else result
+  }
+
+  /**
+   * Compiles the given code, passing the given options to the compiler
+   */
+  private def compile(code: String, options: CompilerOption*): Global#Tree = {
+    val global = getCompiler(options = options: _*)
+    import global._
+    val source = new BatchSourceFile(NoFile, wrap(code))
+    val run = new Run
+    run.compileSources(source :: Nil)
+    unWrap(global)(run.units.next.body)
   }
 
   private def reportError(error: String) = throw CompilationFailed(error)
@@ -55,17 +67,42 @@ object Compiler {
     override def displayPrompt(): Unit = ()
   }
 
-  private val compilerOptions: String = {
-    val usePlugin = "-Xplugin:" + System.getProperty("sbt.paths.plugin.jar")
-    val classpath = "-cp " + sys.props("sbt.class.directory") + ":" + sys.props("sbt.paths.plugin.jar")
-    s"$usePlugin $classpath"
+  /**
+   * Represents a basic compiler option (the string given to the command line invocation
+   * of scalac)
+   */
+  private implicit class CompilerOption(s: String) {
+    override def toString: String = s
   }
 
-  private def getCompiler(additionalOptions: String = ""): Global = {
+  /**
+   * An option to add a compiler plugin
+   */
+  private class CompilerPlugin(jarPath: String, classpath: List[String])
+    extends CompilerOption(s"-Xplugin:$jarPath" + (if (classpath.nonEmpty) classpath.mkString(" -cp ", ":", "") else ""))
+
+  /**
+   * Option to add the ParserMacro compiler plugin
+   */
+  private case object ParserMacro extends CompilerPlugin(
+      jarPath = sys props "sbt.paths.plugin.jar",
+      classpath = List(sys props "sbt.class.directory", sys props "sbt.paths.plugin.jar"))
+
+  /**
+   * Option to add Macro Paradise to the compiler plugins
+   */
+  private case object Paradise extends CompilerPlugin(
+      jarPath = sys props "sbt.path.paradise.jar",
+      classpath = Nil)
+
+  /**
+   * Returns an instance of `Global` configured according to the given options.
+   */
+  private def getCompiler(options: CompilerOption*): Global = {
     // I don't really know how I can reset the compiler after a run, nor what else
     // should also be reset, so for now this method creates new instances of everything,
     // which is not so cool.
-    val arguments = CommandLineParser.tokenize(s"$compilerOptions $additionalOptions")
+    val arguments = CommandLineParser.tokenize(options mkString " ")
     val command = new CompilerCommand(arguments.toList, reportError _)
     val outputDir = new VirtualDirectory("(memory)", None)
     command.settings.outputDirs setSingleOutput outputDir
@@ -100,57 +137,3 @@ object Compiler {
   }
 
 }
-
-// The code below is a huge mess that initially was an attempt at using ToolBoxes with the hijacked syntax analyzer.
-// Unfortunately this didn't work out because ToolBoxes directly call `Global.newUnitParser(CompilationUnit)` which
-// in turn returns a vanilla `UnitParser`, and thus bypasses the hijacking of the syntax analyzer.
-// The code is left there in case a brilliant idea comes to solve this problem.
-// import org.duhemm.parsermacro.ParserMacroSyntaxAnalyzer
-// import scala.collection.mutable
-
-// import scala.tools.nsc.{ Global, SubComponent }
-// import scala.tools.reflect.{ ToolBox, ReflectGlobal }
-// import scala.reflect.runtime.{ universe => ru }
-
-// import scala.tools.nsc.Global
-// import scala.tools.nsc.reporters.Reporter
-// import scala.tools.nsc.Settings
-
-// class MyHackedCompiler(tx: scala.tools.reflect.ToolBoxFactory$ToolBoxImpl, old: scala.tools.reflect.ToolBoxFactory$ToolBoxImpl$ToolBoxGlobal) extends scala.tools.reflect.ToolBoxFactory$ToolBoxImpl$ToolBoxGlobal(null, null, null) { //(old.frontEnd, old.options, null) {
-//   self =>
-//   override def newUnitParser(unit: CompilationUnit) =
-//     ???
-//     //(new { val global: self.type = self } with ParserMacroSyntaxAnalyzer).asInstanceOf[Nothing]
-// }
-
-// object Compiler {
-
-//   val usePlugin = "-Xplugin:" + System.getProperty("sbt.paths.plugin.jar")
-//   val classpath = "-cp " + sys.props("sbt.class.directory") + ":" + System.getProperty("sbt.paths.plugin.jar")
-//   val tb = scala.reflect.runtime.currentMirror.mkToolBox(options = classpath + " " + usePlugin)
-
-//   def hijackSyntaxAnalyzer(): Unit = {
-
-
-//     tb.parse("1") // Make sure the toolbox compiler is initialized
-
-//     val app  = tb.getClass.getDeclaredMethods.find(_.getName == "withCompilerApi").get
-//     val res = app.invoke(tb)
-//     val fx = res.getClass.getDeclaredFields.find(_.getName == "api$module").get
-//     fx.setAccessible(true)
-//     val f = fx.get(res)
-//     val f2 = f.getClass.getDeclaredFields.find(_.getName == "compiler").get
-//     f2.setAccessible(true)
-
-//     val oldCompiler = f2.get(f).asInstanceOf[ReflectGlobal]
-//     println(oldCompiler.getClass.getName)
-//     val tx = tb.asInstanceOf[scala.tools.reflect.ToolBoxFactory$ToolBoxImpl]
-//     val newCompiler = Class.forName("compiler.MyHackedCompiler").getDeclaredConstructors()(0).newInstance(tx, oldCompiler) //new MyHackedCompiler(oldCompiler)
-//     f2.set(f, newCompiler)
-//   }
-
-//   hijackSyntaxAnalyzer()
-
-//   def compile(src: String) = tb.typecheck(tb.parse(src))
-
-// }
