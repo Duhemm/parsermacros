@@ -33,9 +33,16 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer { self =>
     override def withPatches(patches: List[BracePatch]): UnitParser = new UnitParser(unit, patches)
     override def newScanner() = new UnitScanner(unit, patches)
 
+    override def blockStatSeq(): List[Tree] =
+      super.blockStatSeq() map transformParserMacroApplication
+
+    override def templateStat: PartialFunction[Token, List[Tree]] = {
+      case t: Token => super.templateStat(t) map transformParserMacroApplication
+    }
+
     override def topStat: PartialFunction[Token, List[Tree]] = {
       case _ if isIdent =>
-        parserMacro :: Nil
+        transformParserMacroApplication(parserMacro) :: Nil
       case t if super.topStat isDefinedAt t =>
         super.topStat(t)
       case _ =>
@@ -106,4 +113,20 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer { self =>
         new MemberPosReporter(unit) show (style = settings.Ymemberpos.value)
     }
   }
+
+  /**
+   * Rewrites a parser macro application to a macro annotated val def. The argument of
+   * the macro annotation is the selection of the parser macro (something like Foo.Bar.baz),
+   * and the value of the definition is the list of strings passed to the parser macro.
+   */
+  private def transformParserMacroApplication(tree: Tree): Tree = {
+    if (tree.hasAttachment[ParserMacroArgumentsAttachment]) {
+      val tokens = tree.attachments.get[ParserMacroArgumentsAttachment].toList.head.args
+      q"@_root_.org.duhemm.parsermacro.ParserMacroExpansion($tree) val tokens = $tokens"
+    } else {
+      tree
+    }
+  }
+
+
 }
