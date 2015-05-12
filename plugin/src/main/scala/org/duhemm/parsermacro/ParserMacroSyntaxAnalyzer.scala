@@ -14,7 +14,7 @@ import scala.collection.mutable.ListBuffer
  * New syntax analyzer that behaves just like scalac's default syntax analyzer, but is able
  * to parse parser macro applications.
  */
-abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer { self =>
+abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer {
   import global._
 
   override val runsAfter: List[String] = Nil
@@ -35,6 +35,15 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer { self =>
 
     override def blockStatSeq(): List[Tree] =
       super.blockStatSeq() map transformParserMacroApplication
+
+    // This fix is required to parse correctly (= as whitebox) parser macro in class constructors.
+    // However, this fix also has the side effect of making us parse some potentially blackbox
+    // application as whitebox. Since the whole infrastructure to support whitebox expansion is not
+    // ready yet, I prefer to keep this fix commented rather than breaking everything.
+    // override def templateStatSeq(isPre : Boolean) = {
+    //   val (self, stats) = super.templateStatSeq(isPre)
+    //   (self, stats map transformParserMacroApplication)
+    // }
 
     override def templateStat: PartialFunction[Token, List[Tree]] = {
       case t: Token => super.templateStat(t) map transformParserMacroApplication
