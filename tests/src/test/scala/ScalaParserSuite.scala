@@ -1,5 +1,7 @@
 import boxity.BlackboxParserMacroSuite
 
+import scala.tools.nsc.Global
+
 /**
  * These tests verify that the modified parser behaves as expected.
  */
@@ -74,6 +76,42 @@ class ScalaParserSuite extends BlackboxParserMacroSuite {
 
   test("Parser macro application should be accepted inside object definition") {
     "foo.bar#(hello world)".shouldParseWrapped
+  }
+
+  test("Parser macro application in the body of a function should be rewritten") {
+    """class A {
+      |  def foo(x: Int): Int = {
+      |    magnificent.parsermacro#(application)
+      |    123
+      |  }
+      |}""".stripMargin parseAndCheck { case classDef: Global#ClassDef =>
+
+        val fooDef          = classDef.impl.body(1).asInstanceOf[Global#DefDef]
+        val fooBody         = fooDef.rhs.asInstanceOf[Global#Block]
+        val syntheticValDef = fooBody.stats(0).asInstanceOf[Global#ValDef]
+
+        checkSyntheticValDef(syntheticValDef)
+    }
+  }
+
+  test("Parser macro application in class constructor should be rewritten") {
+    pendingUntilFixed {
+      """class A {
+        |  foo.bar#(hello world)
+        |}""".stripMargin parseAndCheck { case classDef: Global#ClassDef =>
+
+          val macroParserApplication = classDef.impl.body(1)
+          assert(macroParserApplication.isDef)
+
+          val syntheticValDef = macroParserApplication.asInstanceOf[Global#ValDef]
+          checkSyntheticValDef(syntheticValDef)
+      }
+    }
+  }
+
+  private def checkSyntheticValDef(valDef: Global#ValDef): Unit = {
+    assert(valDef.name.toString == "tokens", s"Rewritten val should be named `tokens` but was `${valDef.name}`")
+    assert(valDef.mods.annotations.nonEmpty, s"Rewritten val should have at least one annotation but none was found.")
   }
 
 

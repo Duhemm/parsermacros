@@ -92,8 +92,34 @@ trait ParserMacroSuite extends FunSuite {
      * Verifies that parsing the given code issues a parsing error matching `expected`.
      * The code is wrapped in a class definition before parsing.
      */
-    def shouldNoParseWrappedWith(expected: String): Unit =
+    def shouldNotParseWrappedWith(expected: String): Unit =
       shouldNotParseWith(expected, wrapped = true)
+
+    /**
+     * Parses the code and verifies that the resulting tree satisfies `test`.
+     * The code is not wrapped before it is parsed.
+     */
+    def parseAndCheck(test: Global#Tree => Unit): Unit = {
+      try {
+        val tree = extractFromEmptyPackage(parse(code, wrapped = false))
+        test(tree)
+      } catch {
+        case CompilationFailed(msg) =>
+          fail(s"Parsing failed but success was expected:\n$msg")
+      }
+    }
+
+    /**
+     * Extracts a single definition from the empty package. If there are more than one definitions,
+     * then they will be lost.
+     */
+    private def extractFromEmptyPackage(tree: Global#Tree): Global#Tree = tree match {
+      case pkg: Global#PackageDef if pkg.name.toString == "<empty>" =>
+        pkg.stats.head
+
+      case other =>
+        other
+    }
 
     private def shouldParse(wrapped: Boolean): Unit = {
       try {
