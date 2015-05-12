@@ -25,11 +25,7 @@ class ExpandParserMacro(val c: Context) {
     val q"val tokens = scala.collection.immutable.List(..$rawArguments)" = annottee
     val typechecked = c.typecheck(originalTree, mode = c.TYPEmode)
     val methodSymbol = typechecked.symbol.asMethod
-
-    // Since all arguments are reified string, they will all be surrounded by quotes. We call
-    // _.tail.init to remove the quotes.
-    // This will fail as soon as there are quotes in the arguments of a parser macro...
-    val arguments = rawArguments map (_.toString.tail.init) map string2input map (_.tokens)
+    val arguments = rawArguments collect { case Literal(Constant(arg: String)) => arg } map string2input map (_.tokens)
 
     getMacroImplementation(methodSymbol) match {
       case Some((instance, method)) =>
