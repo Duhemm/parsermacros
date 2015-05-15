@@ -10,8 +10,7 @@ import scala.reflect.internal.Flags._
 
 trait AnalyzerPlugins extends Traces
                       with Validation
-                      with Runtime
-                      with Exceptions { self: Plugin =>
+                      with Runtime { self: Plugin =>
   import global._
   import analyzer._
   import definitions._
