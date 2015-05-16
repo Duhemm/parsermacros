@@ -36,14 +36,10 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer {
     override def blockStatSeq(): List[Tree] =
       super.blockStatSeq() map transformParserMacroApplication
 
-    // This fix is required to parse correctly (= as whitebox) parser macro in class constructors.
-    // However, this fix also has the side effect of making us parse some potentially blackbox
-    // application as whitebox. Since the whole infrastructure to support whitebox expansion is not
-    // ready yet, I prefer to keep this fix commented rather than breaking everything.
-    // override def templateStatSeq(isPre : Boolean) = {
-    //   val (self, stats) = super.templateStatSeq(isPre)
-    //   (self, stats map transformParserMacroApplication)
-    // }
+    override def templateStatSeq(isPre : Boolean) = {
+      val (self, stats) = super.templateStatSeq(isPre)
+      (self, stats map transformParserMacroApplication)
+    }
 
     override def templateStat: PartialFunction[Token, List[Tree]] = {
       case t: Token => super.templateStat(t) map transformParserMacroApplication
@@ -123,13 +119,17 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer {
     }
   }
 
+  // We want to enable the rewritting of parser macro application to macro annotated declarations only if
+  // Paradise is enabled.
+  private lazy val enableWhitebox = plugins exists (_.getClass.getName contains "org.scalamacros.paradise.Plugin")
+
   /**
    * Rewrites a parser macro application to a macro annotated val def. The argument of
    * the macro annotation is the selection of the parser macro (something like Foo.Bar.baz),
    * and the value of the definition is the list of strings passed to the parser macro.
    */
   private def transformParserMacroApplication(tree: Tree): Tree = {
-    if (tree.hasAttachment[ParserMacroArgumentsAttachment]) {
+    if (enableWhitebox && tree.hasAttachment[ParserMacroArgumentsAttachment]) {
       val tokens = tree.attachments.get[ParserMacroArgumentsAttachment].toList.head.args
       q"@_root_.org.duhemm.parsermacro.ParserMacroExpansion($tree) val tokens = $tokens"
     } else {

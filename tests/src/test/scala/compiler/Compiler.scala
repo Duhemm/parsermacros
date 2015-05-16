@@ -31,7 +31,7 @@ object Compiler {
    * Parses the given code and returns its AST.
    */
   def parse(code: String, wrapped: Boolean): Global#Tree = {
-    val global = getCompiler(options = ParserMacro, "-Ystop-after:parser")
+    val global = getCompiler(options = ParserMacro, Paradise, "-Ystop-after:parser")
     import global._
     val source = new BatchSourceFile(NoFile, if (wrapped) wrap(code) else code)
     val run = new Run

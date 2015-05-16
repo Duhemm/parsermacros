@@ -11,10 +11,10 @@ import scala.meta.Input.String.{ apply => string2input }
 
 import java.lang.reflect.Method
 
-class ExpandParserMacro(val c: Context) {
+class ExpandParserMacro(val c: Context) extends UniverseUtils with Signatures {
 
   import c.universe._
-  import Flag._
+  val universe = c.universe
 
   def impl(annottees: c.Tree*): c.Tree = {
 
@@ -29,7 +29,12 @@ class ExpandParserMacro(val c: Context) {
 
     getMacroImplementation(methodSymbol) match {
       case Some((instance, method)) =>
-        val expanded = method.invoke(instance, arguments: _*)
+        val expanded =
+          try loader.invoke(instance, method, arguments)
+          catch {
+            case e: InvalidMacroInvocationException =>
+              c.error(c.macroApplication.pos, e.msg)
+          }
 
         // There are many trees toGTree cannot convert at the moment...
         c.parse(expanded.toString)
@@ -39,19 +44,54 @@ class ExpandParserMacro(val c: Context) {
     }
   }
 
-  // TODO: Extract the macro implementationg binding :)
-  // TODO: Refactor this to use the stuff that already exist in trait Runtime
-  def getMacroImplementation(sym: MethodSymbol): Option[(Object, Method)] = {
-    val ownerObject = sym.owner.asClass
-    val ownerName = ownerObject.fullName
-    val methName  = "impl"
-    val cl = this.getClass.getClassLoader
+  /**
+   * Extracts the reference to the macro implementation from a macro method, and returns
+   * an instance of the macro provider along with the method to call on it.
+   */
+  private def getMacroImplementation(sym: MethodSymbol): Option[(Object, Method)] = {
 
-    val clss = Class.forName(ownerName, true, cl)
-    clss.getDeclaredMethods find (_.getName == methName) map { m =>
-      (ReflectionUtils.staticSingletonInstance(cl, ownerName), m)
+    sym.annotations collect {
+      case ann if ann.tree.tpe.toString == macroImplType => ann.tree.children.tail
+    } match {
+      case List(pickle) :: Nil =>
+        pickle.toString match {
+          case legacyImplExtract(className, methName) =>
+            loader.findMethod(className, methName)
+
+          case _ =>
+            c.abort(c.macroApplication.pos, "Unrecognized macro implementation binding")
+        }
+
+      case _ :: List(signature) :: Nil =>
+        val ScalahostSignature(ddef) = signature.asInstanceOf[universe.Tree]
+        val className = erasedName(ddef.symbol.owner)
+        val methName = ddef.name.toString + "$impl"
+        loader.findMethod(className, methName)
+
+      case _ =>
+        c.abort(c.macroApplication.pos, "Unrecognized macro implementation binding")
     }
   }
+
+  private val loader = new ClassLoaderProvider {
+    // TODO: This won't work in the REPL.
+    def withClassLoader[T](op: ClassLoader => T): T =
+      op(this.getClass.getClassLoader)
+  }
+
+  /**
+   * The pattern to extract the reference to the macro implementation from the string representation
+   * of a macro impl binding.
+   * This type is private to the package `scala`, thus we cannot use the associated extractor.
+   */
+  private val legacyImplExtract =
+    """`macro`\("macroEngine" = "v7\.0 \(implemented in Scala 2\.11\.0-M8\)", "isBundle" = false, "isBlackbox" = true, "className" = "(.+?)", "methodName" = "(.+?)", "signature" = (?:.+?)""".r
+
+  /**
+   * This type is private to scalac implementation. We compare the name of the types...
+   */
+  private val macroImplType = "scala.reflect.macros.internal.macroImpl"
+
 }
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")

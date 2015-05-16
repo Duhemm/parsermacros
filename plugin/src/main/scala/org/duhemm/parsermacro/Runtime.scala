@@ -47,7 +47,6 @@ trait Runtime { self: Plugin =>
 
           loader.findMethod(className, methName) map {
             case (instance, method) =>
-              method.setAccessible(true)
               loader.invoke(instance, method, x.others.asInstanceOf[Seq[AnyRef]])
           } getOrElse {
             throw InvalidMacroInvocationException(s"Could not find method $methName in class $className.")

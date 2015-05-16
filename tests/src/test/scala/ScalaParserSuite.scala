@@ -1,11 +1,13 @@
-import boxity.BlackboxParserMacroSuite
+import boxity.ParserMacroSuite
 
 import scala.tools.nsc.Global
 
 /**
  * These tests verify that the modified parser behaves as expected.
  */
-class ScalaParserSuite extends BlackboxParserMacroSuite {
+class ScalaParserSuite extends ParserMacroSuite {
+
+  override def compile(code: String) = throw new UnsupportedOperationException
 
   test("Simple class definition should be parsed correctly") {
     "class A extends B { def foo = bar }".shouldParse
@@ -95,17 +97,15 @@ class ScalaParserSuite extends BlackboxParserMacroSuite {
   }
 
   test("Parser macro application in class constructor should be rewritten") {
-    pendingUntilFixed {
-      """class A {
-        |  foo.bar#(hello world)
-        |}""".stripMargin parseAndCheck { case classDef: Global#ClassDef =>
+    """class A {
+      |  foo.bar#(hello world)
+      |}""".stripMargin parseAndCheck { case classDef: Global#ClassDef =>
 
-          val macroParserApplication = classDef.impl.body(1)
-          assert(macroParserApplication.isDef)
+        val macroParserApplication = classDef.impl.body(1)
+        assert(macroParserApplication.isDef)
 
-          val syntheticValDef = macroParserApplication.asInstanceOf[Global#ValDef]
-          checkSyntheticValDef(syntheticValDef)
-      }
+        val syntheticValDef = macroParserApplication.asInstanceOf[Global#ValDef]
+        checkSyntheticValDef(syntheticValDef)
     }
   }
 

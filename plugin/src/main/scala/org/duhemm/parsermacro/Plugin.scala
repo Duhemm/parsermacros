@@ -6,7 +6,7 @@ import scala.tools.nsc.plugins.{ Plugin => NscPlugin }
 class Plugin(val global: Global) extends NscPlugin
                                     with HijackSyntaxAnalyzer
                                     with AnalyzerPlugins
-                                    with UniverseProvider {
+                                    with UniverseUtils {
   import global.analyzer
 
   val name = "parsermacro"

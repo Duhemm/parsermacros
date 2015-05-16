@@ -2,7 +2,7 @@ package org.duhemm.parsermacro
 
 import scala.reflect.api.Universe
 
-trait Signatures { self: UniverseProvider =>
+trait Signatures { self: UniverseUtils =>
   import universe._
   import compat._
   import internal.reificationSupport.setType

@@ -24,6 +24,7 @@ trait ClassLoaderProvider {
   def findMethod(clazz: String, method: String): Option[(Object, Method)] = withClassLoader { cl =>
     val clss = Class.forName(clazz, true, cl)
     clss.getDeclaredMethods find (_.getName == method) map { m =>
+      if (!m.isAccessible) m.setAccessible(true)
       (ReflectionUtils.staticSingletonInstance(cl, clazz), m)
     }
   }
