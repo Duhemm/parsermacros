@@ -56,7 +56,7 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
       parts.init.zipWithIndex.flatMap {
         case (part, i) =>
           val argAsString = arg(i).toString
-          trim(part.tokens) :+ Token.Unquote(Input.String(argAsString), 0, argAsString.length - 1, arg(i))
+          trim(part.tokens) :+ Token.Unquote(Input.String(argAsString), dialect, 0, argAsString.length - 1, arg(i))
       } ++ trim(parts.last.tokens)
 
     Tokens(tokens: _*)

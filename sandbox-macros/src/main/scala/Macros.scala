@@ -33,7 +33,7 @@ object Macros {
         ???
     }
 
-    val bdy = Parse.parseTerm(Scala211)(Input.Virtual(body.toTokens))
+    val bdy = Parse.parseTerm(Scala211)(body.toTokens)
 
     iteratee(bdy)
   }

@@ -6,6 +6,7 @@ import scala.reflect.macros.blackbox.Context
 import scala.reflect.macros.Universe
 
 import scala.meta.{ Dialect, Input, Token, Tokens }
+import scala.meta.syntactic.Content
 import scala.meta.internal.ast.Lit
 
 import scala.meta.parsermacro.TokenReificationMacros
@@ -22,17 +23,14 @@ trait TokenQuasiquoteLiftables extends AdtLiftables { self: TokenReificationMacr
         q"""new _root_.scala.meta.Dialect {
              override def toString = ${other.toString}
              def bindToSeqWildcardDesignator = ${other.bindToSeqWildcardDesignator}
+             def allowXmlLiterals = ${other.allowXmlLiterals}
              def allowEllipses = ${other.allowEllipses}
            }"""
     }
   }
 
-  implicit lazy val liftInputReal: Liftable[Input.Real] = Liftable[Input.Real] { input =>
-    q"_root_.scala.meta.Input.String(${new String(input.content)})"
-  }
-
-  implicit lazy val liftInputVirtual: Liftable[Input.Virtual] = Liftable[Input.Virtual] { input =>
-    q"new _root_.scala.meta.Input.Virtual(${input.payload})"
+  implicit lazy val liftContent: Liftable[Content] = Liftable[Content] { content =>
+    q"_root_.scala.meta.Input.String(${new String(content.chars)})"
   }
 
   implicit def liftBool2T[T: Liftable]: Liftable[Boolean => T] = Liftable[Boolean => T] { f =>
@@ -46,7 +44,7 @@ trait TokenQuasiquoteLiftables extends AdtLiftables { self: TokenReificationMacr
    * of the argument when the tokens get lifted.
    */
   implicit lazy val liftToken: Liftable[Token] = Liftable[Token] {
-    case Token.Unquote(_, _, _, tree: Tree) => tree
+    case Token.Unquote(_, _, _, _, tree: Tree) => tree
     case other                              => materializeAdt[Token](other)
   }
 
@@ -63,7 +61,7 @@ trait TokenQuasiquoteLiftables extends AdtLiftables { self: TokenReificationMacr
       middle match {
         case Tokens() =>
           prepend(pre, q"_root_.scala.meta.syntactic.Tokens()")
-        case Token.Unquote(_, _, _, tree: Tree) +: rest =>
+        case Token.Unquote(_, _, _, _, tree: Tree) +: rest =>
           // If we are splicing only a single token we need to wrap it in a Vector
           // to be able to append and prepend other tokens to it easily.
           val quoted = if (tree.tpe <:< typeOf[Token]) q"_root_.scala.meta.syntactic.Tokens($tree)" else tree
