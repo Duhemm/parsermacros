@@ -56,19 +56,6 @@ trait Runtime { self: Plugin =>
       Some(runtime)
   }
 
-  private val loader = new ClassLoaderProvider {
-    override def withClassLoader[T](op: ClassLoader => T): T = {
-      val classpath = global.classPath.asURLs
-      val classloader = ScalaClassLoader.fromURLs(classpath, self.getClass.getClassLoader)
-
-      try op(classloader)
-      catch {
-        case ex: ClassNotFoundException =>
-          val virtualDirectory = globalSettings.outputDirs.getSingleOutput.get
-          val newLoader = new AbstractFileClassLoader(virtualDirectory, classloader) {}
-          op(newLoader)
-      }
-    }
-  }
+  private lazy val loader = new GlobalClassLoaderProvider(global)
 
 }

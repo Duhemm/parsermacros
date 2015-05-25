@@ -1,6 +1,9 @@
 package org.duhemm.parsermacro
 
 import java.lang.reflect.Method
+
+import scala.tools.nsc.Global
+
 import scala.reflect.internal.util.ScalaClassLoader
 import scala.reflect.internal.util.AbstractFileClassLoader
 import scala.reflect.runtime.ReflectionUtils
@@ -39,4 +42,19 @@ trait ClassLoaderProvider {
     } else method.invoke(instance, arguments: _*)
   }
 
+}
+
+class GlobalClassLoaderProvider(global: Global) extends ClassLoaderProvider {
+  override def withClassLoader[T](op: ClassLoader => T): T = {
+    val classpath = global.classPath.asURLs
+    val classloader = ScalaClassLoader.fromURLs(classpath, this.getClass.getClassLoader)
+
+    try op(classloader)
+    catch {
+      case ex: ClassNotFoundException =>
+        val virtualDirectory = global.settings.outputDirs.getSingleOutput.get
+        val newLoader = new AbstractFileClassLoader(virtualDirectory, classloader) {}
+        op(newLoader)
+    }
+  }
 }

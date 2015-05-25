@@ -1,5 +1,7 @@
 package org.duhemm.parsermacro
 
+import scala.tools.nsc.Global
+
 import scala.reflect.macros.whitebox.Context
 import scala.reflect.runtime.ReflectionUtils
 import scala.language.experimental.macros
@@ -73,11 +75,7 @@ class ExpandParserMacro(val c: Context) extends UniverseUtils with Signatures {
     }
   }
 
-  private val loader = new ClassLoaderProvider {
-    // TODO: This won't work in the REPL.
-    def withClassLoader[T](op: ClassLoader => T): T =
-      op(this.getClass.getClassLoader)
-  }
+  private lazy val loader = new GlobalClassLoaderProvider(universe.asInstanceOf[Global])
 
   /**
    * The pattern to extract the reference to the macro implementation from the string representation
