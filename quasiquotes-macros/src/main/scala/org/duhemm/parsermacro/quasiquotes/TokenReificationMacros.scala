@@ -155,13 +155,18 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
             (q"_root_.scala.Some(..$bindings)", q"_root_.scala.None")
           }
 
-        // TODO: This generates a warning when `pattern` is (x0 @ _) because the default case is unreachable.
+        val cases =
+          if (parts.size == 2 && dottedUnquote == 0)
+            q"""in match { case $pattern => $thenp }"""
+          else
+            q"""in match {
+                  case $pattern => $thenp
+                  case _        => $elsep
+                }"""
+
         q"""
           new {
-            def unapply(in: _root_.scala.meta.Tokens) = in match {
-              case $pattern => $thenp
-              case _        => $elsep
-            }
+            def unapply(in: _root_.scala.meta.Tokens) = $cases
           }.unapply(..$args)
         """
     }
