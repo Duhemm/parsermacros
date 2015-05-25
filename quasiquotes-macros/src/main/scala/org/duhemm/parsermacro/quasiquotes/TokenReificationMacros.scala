@@ -89,6 +89,9 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
           case t                => pq"_root_.scala.meta.parsermacro.TokenExtractor(${t.code})"
         }
 
+        // Split the input in three parts: (before, ..unquote, after).
+        // Since `Tokens` is a`Seq`, we will be able to deconstruct an instance of
+        // `Tokens` using before +: ..unquote :+ after.
         val splitted = {
           def split(toks: Seq[Token]): (Tokens, Option[Token], Tokens) = toks match {
             case (_: Token.Ellipsis) +: (u: Token.Unquote) +: rest =>
@@ -107,19 +110,23 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
 
         val pattern =
           splitted match {
+            // corresponds to `case toks"..$foo" => ...`
             case (Tokens(), Some(middle), Tokens()) =>
               patternForToken(middle)
 
+            // corresponds to `case toks"foo $bar baz" => ...`
             case (before, None, _) =>
               val subPatterns = before map patternForToken
               q"_root_.scala.meta.syntactic.Tokens(..$subPatterns)"
 
+            // corresponds to `case toks"foo $bar ..$baz" => ...`
             case (before, Some(middle), Tokens()) =>
               val beforePatterns = before map patternForToken
               (beforePatterns foldRight patternForToken(middle)) {
                 case (pat, acc) => pq"$pat +: $acc"
               }
 
+            // corresponds to `case toks"foo $bar ..$baz $quux blah"
             case (before, Some(middle), after) =>
               val beforePatterns = before map patternForToken
               val afterPatterns  = after map patternForToken
@@ -155,6 +162,8 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
             (q"_root_.scala.Some(..$bindings)", q"_root_.scala.None")
           }
 
+        // If our pattern is simply toks"..$foo", we don't emit a default case
+        // to avoid generating a warning during the compilation of the expansion.
         val cases =
           if (parts.size == 2 && dottedUnquote == 0)
             q"""in match { case $pattern => $thenp }"""
@@ -175,9 +184,12 @@ class TokenReificationMacros(override val c: Context) extends ReificationMacros(
   // Required to make use of private members (`instantiateDialect`) defined in `ReificationMacros`
   private val parentClass = classOf[ReificationMacros]
   private def getAndSetAccessible(meth: String): Method = {
-    val m = parentClass.getDeclaredMethods.filter(_.getName == meth).headOption.getOrElse(parentClass.getDeclaredMethods.filter(_.getName endsWith meth).head)
-    m.setAccessible(true)
-    m
+    parentClass.getDeclaredMethods find (_.getName == meth) map { m =>
+      m.setAccessible(true)
+      m
+    } getOrElse {
+      c.abort(c.macroApplication.pos, s"Could not find method $meth in class $parentClass.")
+    }
   }
 
   private val instantiateDialect: ReflectTree => Dialect = {
