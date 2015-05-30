@@ -14,8 +14,10 @@ import scala.collection.mutable.ListBuffer
  * New syntax analyzer that behaves just like scalac's default syntax analyzer, but is able
  * to parse parser macro applications.
  */
-abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer {
+abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer with ParserMacroSyntheticObject {
   import global._
+
+  val universe = global.rootMirror.universe
 
   override val runsAfter: List[String] = Nil
   override val runsRightAfter: Option[String] = None
@@ -134,10 +136,7 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer {
   private def transformParserMacroApplication(tree: Tree): Tree = {
     if (enableWhitebox && tree.hasAttachment[ParserMacroArgumentsAttachment]) {
       val tokens = tree.attachments.get[ParserMacroArgumentsAttachment].toList.head.args
-      q"""@_root_.org.duhemm.parsermacro.ParserMacroExpansion($tree)
-          object TemporaryObject {
-            val tokens = $tokens
-          }"""
+      TemporaryObject(tree, tokens)
     } else {
       tree
     }

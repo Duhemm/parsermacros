@@ -13,10 +13,12 @@ import scala.meta.Input.String.{ apply => string2input }
 
 import java.lang.reflect.Method
 
-class ExpandParserMacro(val c: Context) extends UniverseUtils with Signatures {
+class ExpandParserMacro(val c: Context) extends UniverseUtils
+                                        with Signatures
+                                        with ParserMacroSyntheticObject {
 
-  import c.universe._
-  val universe = c.universe
+  val universe: c.universe.type = c.universe
+  import universe._
 
   def impl(annottees: c.Tree*): c.Tree = {
 
@@ -24,7 +26,7 @@ class ExpandParserMacro(val c: Context) extends UniverseUtils with Signatures {
     val annottee = annottees.head
 
     val q"new $_($originalTree).macroTransform($_)" = c.macroApplication
-    val q"object TemporaryObject { val tokens = scala.collection.immutable.List(..${rawArguments: List[String]}) }" = annottee
+    val TemporaryObject(rawArguments) = annottee
     val arguments = rawArguments map string2input map (_.tokens)
     val typechecked = c.typecheck(originalTree, mode = c.TYPEmode)
     val methodSymbol = typechecked.symbol.asMethod
