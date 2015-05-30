@@ -14,7 +14,7 @@ abstract class TokenQuasiquoteSuite extends FunSuite {
     def isMinus: Boolean = t isIdentNamed "-"
 
     def isIntLit(expected: Int): Boolean = t match {
-      case t: Literal.Int => t.value(false) == expected
+      case t: Literal.Int => t.value == expected
       case _              => false
     }
 

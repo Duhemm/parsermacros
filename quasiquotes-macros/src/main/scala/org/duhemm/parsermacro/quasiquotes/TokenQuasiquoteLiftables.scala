@@ -2,7 +2,6 @@ package org.duhemm.parsermacro.quasiquotes
 
 import org.scalameta.adt.{ Liftables => AdtLiftables }
 
-import scala.reflect.macros.blackbox.Context
 import scala.reflect.macros.Universe
 
 import scala.meta.{ Dialect, Input, Token, Tokens }
@@ -35,6 +34,14 @@ trait TokenQuasiquoteLiftables extends AdtLiftables { self: TokenReificationMacr
 
   implicit def liftBool2T[T: Liftable]: Liftable[Boolean => T] = Liftable[Boolean => T] { f =>
     q"(x: _root_.scala.Boolean) => if (x) ${f(true)} else ${f(false)}"
+  }
+
+  implicit def liftBigInt: Liftable[BigInt] = Liftable[BigInt] { v =>
+    q"_root_.scala.math.BigInt(${v.bigInteger.toString})"
+  }
+
+  implicit def liftBigDecimal: Liftable[BigDecimal] = Liftable[BigDecimal] { v =>
+    q"_root_.scala.math.BigDecimal(${v.bigDecimal.toString})"
   }
 
   /**
