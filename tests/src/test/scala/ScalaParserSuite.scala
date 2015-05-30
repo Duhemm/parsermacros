@@ -61,7 +61,7 @@ class ScalaParserSuite extends ParserMacroSuite {
   }
 
   test("Normal function application should be rejection in top level position") {
-    "foo.bar(2)" shouldNotParseWith "'#' expected but '(' found."
+    "foo.bar(2)" shouldNotParseWith "only parser macros can be called at top-level."
   }
 
   test("Parser macro application with name formed of only one part should be accepted") {

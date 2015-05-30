@@ -85,7 +85,7 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer {
           t updateAttachment ParserMacroArgumentsAttachment(macroParserArgs.toList)
 
         case other =>
-          syntaxErrorOrIncompleteAnd(s"'#' expected but ${token2string(other)} found.", skipIt = true)(EmptyTree)
+          syntaxErrorOrIncompleteAnd(s"only parser macros can be called at top-level.", skipIt = true)(EmptyTree)
 
       }
     }
