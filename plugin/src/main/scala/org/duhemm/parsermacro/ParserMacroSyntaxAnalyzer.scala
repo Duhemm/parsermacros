@@ -71,8 +71,10 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer {
               case LBRACE => RBRACE
               case other  => syntaxErrorOrIncompleteAnd(s"'(' or '{' expected but ${token2string(other)} found.", skipIt = true)(ERROR)
             }
+            // `in.offset` is the offset of the closing parenthesis / brace. We take the immediate next character,
+            // so that we don't lose comments at the very beginning of the parser macro application.
+            val start = in.offset + 1
             in.nextToken()
-            val start = in.offset
             while(in.token != endToken && in.token != ERROR && in.token != EOF) {
               in.nextToken()
             }
