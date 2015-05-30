@@ -88,11 +88,11 @@ class ScalaParserSuite extends ParserMacroSuite {
       |  }
       |}""".stripMargin parseAndCheck { case classDef: Global#ClassDef =>
 
-        val fooDef          = classDef.impl.body(1).asInstanceOf[Global#DefDef]
-        val fooBody         = fooDef.rhs.asInstanceOf[Global#Block]
-        val syntheticValDef = fooBody.stats(0).asInstanceOf[Global#ValDef]
+        val fooDef             = classDef.impl.body(1).asInstanceOf[Global#DefDef]
+        val fooBody            = fooDef.rhs.asInstanceOf[Global#Block]
+        val syntheticModuleDef = fooBody.stats(0).asInstanceOf[Global#ModuleDef]
 
-        checkSyntheticValDef(syntheticValDef)
+        checkSyntheticModuleDef(syntheticModuleDef)
     }
   }
 
@@ -104,14 +104,21 @@ class ScalaParserSuite extends ParserMacroSuite {
         val macroParserApplication = classDef.impl.body(1)
         assert(macroParserApplication.isDef)
 
-        val syntheticValDef = macroParserApplication.asInstanceOf[Global#ValDef]
-        checkSyntheticValDef(syntheticValDef)
+        val syntheticModuleDef = macroParserApplication.asInstanceOf[Global#ModuleDef]
+        checkSyntheticModuleDef(syntheticModuleDef)
     }
+  }
+
+  private def checkSyntheticModuleDef(moduleDef: Global#ModuleDef): Unit = {
+    assert(moduleDef.name.toString == "TemporaryObject")
+    assert(moduleDef.mods.annotations.nonEmpty, s"Synthetic module should have at least one annotation but none was found.")
+
+    val syntheticValDef = moduleDef.impl.body(1).asInstanceOf[Global#ValDef]
+    checkSyntheticValDef(syntheticValDef)
   }
 
   private def checkSyntheticValDef(valDef: Global#ValDef): Unit = {
     assert(valDef.name.toString == "tokens", s"Rewritten val should be named `tokens` but was `${valDef.name}`")
-    assert(valDef.mods.annotations.nonEmpty, s"Rewritten val should have at least one annotation but none was found.")
   }
 
 

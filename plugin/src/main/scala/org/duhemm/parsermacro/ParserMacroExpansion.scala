@@ -24,10 +24,10 @@ class ExpandParserMacro(val c: Context) extends UniverseUtils with Signatures {
     val annottee = annottees.head
 
     val q"new $_($originalTree).macroTransform($_)" = c.macroApplication
-    val q"val tokens = scala.collection.immutable.List(..$rawArguments)" = annottee
+    val q"object TemporaryObject { val tokens = scala.collection.immutable.List(..${rawArguments: List[String]}) }" = annottee
+    val arguments = rawArguments map string2input map (_.tokens)
     val typechecked = c.typecheck(originalTree, mode = c.TYPEmode)
     val methodSymbol = typechecked.symbol.asMethod
-    val arguments = rawArguments collect { case Literal(Constant(arg: String)) => arg } map string2input map (_.tokens)
 
     getMacroImplementation(methodSymbol) match {
       case Some((instance, method)) =>

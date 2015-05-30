@@ -126,14 +126,18 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer {
   private lazy val enableWhitebox = plugins exists (_.getClass.getName contains "org.scalamacros.paradise.Plugin")
 
   /**
-   * Rewrites a parser macro application to a macro annotated val def. The argument of
-   * the macro annotation is the selection of the parser macro (something like Foo.Bar.baz),
-   * and the value of the definition is the list of strings passed to the parser macro.
+   * Rewrites a parser macro application to a macro annotated module def. The argument of
+   * the macro annotation is the selection of the parser macro (something like Foo.Bar.baz).
+   * The module def contains a single value definition which holds the parameters of the parser macro.
+   * The object will be replaced by the expansion of the parser macro.
    */
   private def transformParserMacroApplication(tree: Tree): Tree = {
     if (enableWhitebox && tree.hasAttachment[ParserMacroArgumentsAttachment]) {
       val tokens = tree.attachments.get[ParserMacroArgumentsAttachment].toList.head.args
-      q"@_root_.org.duhemm.parsermacro.ParserMacroExpansion($tree) val tokens = $tokens"
+      q"""@_root_.org.duhemm.parsermacro.ParserMacroExpansion($tree)
+          object TemporaryObject {
+            val tokens = $tokens
+          }"""
     } else {
       tree
     }
