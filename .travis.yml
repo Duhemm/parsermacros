@@ -4,4 +4,4 @@ scala:
   - 2.11.6
 
 script:
-  - sbt clean update cmp test
+  - sbt clean update compile test
