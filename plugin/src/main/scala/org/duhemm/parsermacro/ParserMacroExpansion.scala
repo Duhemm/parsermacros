@@ -40,7 +40,8 @@ class ExpandParserMacro(val c: Context) extends UniverseUtils
               c.error(c.macroApplication.pos, e.msg)
           }
 
-        // There are many trees toGTree cannot convert at the moment...
+        // There are many trees toGTree cannot convert at the moment
+        // (e.g. `def foo = bar`, `class foo extends bar`, ...)
         c.parse(expanded.toString)
 
       case _ =>
