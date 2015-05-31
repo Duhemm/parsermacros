@@ -1,4 +1,0 @@
-import boxity.BlackboxParserMacroSuite
-import syntaxes.legacy.LegacyCorrectMacros
-
-class BlackboxLegacyCorrectMacros extends BlackboxParserMacroSuite with LegacyCorrectMacros

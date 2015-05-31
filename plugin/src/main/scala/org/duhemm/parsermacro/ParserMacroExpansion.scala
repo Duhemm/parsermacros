@@ -58,15 +58,6 @@ class ExpandParserMacro(val c: Context) extends UniverseUtils
     sym.annotations collect {
       case ann if ann.tree.tpe.toString == macroImplType => ann.tree.children.tail
     } match {
-      case List(pickle) :: Nil =>
-        pickle.toString match {
-          case legacyImplExtract(className, methName) =>
-            loader.findMethod(className, methName)
-
-          case _ =>
-            c.abort(c.macroApplication.pos, "Unrecognized macro implementation binding")
-        }
-
       case _ :: List(signature) :: Nil =>
         val ScalahostSignature(ddef) = signature.asInstanceOf[universe.Tree]
         val className = erasedName(ddef.symbol.owner)

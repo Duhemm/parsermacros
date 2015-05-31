@@ -155,11 +155,9 @@ trait AnalyzerPlugins extends Traces
      */
     override def pluginsMacroRuntime(expandee: Tree): Option[MacroRuntime] = {
       expandee match {
-        case ParserMacroApplication(_, _, ParserMacroBinding(binding)) =>
-          binding.fold(
-            legacyBinding => legacyRuntime(legacyBinding),
-            scalametaBinding => scalametaRuntime(scalametaBinding)
-          )
+        case ParserMacroApplication(_, _, ddef) =>
+
+          scalametaRuntime(ddef)
 
         case _ =>
           None
@@ -170,28 +168,24 @@ trait AnalyzerPlugins extends Traces
      * Extractor for parser macro applications.
      */
     private object ParserMacroApplication {
-      def unapply(tree: Tree): Option[(Tree, List[String], ParserMacroBinding)] = {
+      def unapply(tree: Tree): Option[(Tree, List[String], DefDef)] = {
 
-        val binding = tree.symbol.annotations.filter(_.atp.typeSymbol == MacroImplAnnotation) match {
-          case AnnotationInfo(_, List(pickle), _) :: Nil                        => Some(new ParserMacroBinding(MacroImplBinding.unpickle(pickle)))
-          case _ :: AnnotationInfo(_, List(ScalahostSignature(ddef)), _) :: Nil => Some(new ParserMacroBinding(ddef))
-          case _                                                                => None
-        }
+        tree.attachments.get[ParserMacroArgumentsAttachment].toList match {
 
-        (tree.attachments.get[ParserMacroArgumentsAttachment].toList, binding) match {
-          case (ParserMacroArgumentsAttachment(arguments) :: Nil, Some(binding)) =>
-            Some((tree, arguments, binding))
+          case ParserMacroArgumentsAttachment(arguments) :: Nil =>
+            tree.symbol.annotations filter (_.atp.typeSymbol == MacroImplAnnotation) match {
+
+              case _ :: AnnotationInfo(_, List(ScalahostSignature(ddef)), _) :: Nil =>
+                Some((tree, arguments, ddef))
+
+              case _ =>
+                None
+            }
 
           case _ =>
             None
         }
       }
     }
-
-    private case class ParserMacroBinding(binding: Either[MacroImplBinding, DefDef]) {
-      def this(binding: MacroImplBinding) = this(Left(binding))
-      def this(ddef: DefDef) = this(Right(ddef))
-    }
-
   }
 }

@@ -17,22 +17,7 @@ trait Validation extends Signatures { self: Plugin =>
   }
 
   /**
-   * Extractor for parser macro implementations that use the scala.reflect macro syntax:
-   *   def impl(tokens: Seq[Token]): Tree = ...
-   *   def foo: Any = macro impl
-   */
-  object LegacyParserMacroImpl {
-    def unapply(tree: Tree): Option[(Modifiers, TermName, List[TypeDef], List[List[ValDef]], Tree, Tree)] = tree match {
-      case DefDef(mods, name, tparams, vparamss, tpt, rhs) if !isLightweightSyntax(rhs) =>
-        Some((mods, name, tparams, vparamss, tpt, rhs))
-
-      case _ =>
-        None
-    }
-  }
-
-  /**
-   * Extractor for parser macro implemenations that ue the scala.meta macro syntax:
+   * Extractor for parser macro implemenations that use the scala.meta macro syntax:
    *   def foo: Any = macro { ... }
    */
   object LightweightParserMacroImpl {
@@ -52,26 +37,9 @@ trait Validation extends Signatures { self: Plugin =>
   def verifyMacroShape(typer: Typer, ddef: DefDef): Option[Tree] = {
 
     ddef match {
-      case LegacyParserMacroImpl(mods, name, tparams, vparamss, tpt, rhs) =>
-        typer.silent(_.typed(markMacroImplRef(rhs))) map {
-          case select: Select if verifyLegacyMacroImpl(select) =>
-            bindMacroImpl(ddef.symbol, select)
-            Some(select)
-
-          case TypeApply(select: Select, _) if verifyLegacyMacroImpl(select) =>
-            bindMacroImpl(ddef.symbol, select)
-            Some(select)
-
-          case _ =>
-            None
-
-        } orElse {
-          case err +: _ => throw InvalidMacroShapeException(err.errPos, err.errMsg)
-        }
-
       case LightweightParserMacroImpl(_, _, _, _, _, _) =>
         val q"{ ${synthesizedImpl: DefDef}; () }" = typer.typed(q"{ ${synthesizeMacroImpl(ddef)}; () }")
-        if (verifyScalaMetaMacroImpl(synthesizedImpl)) {
+        if (verifyMacroImpl(synthesizedImpl)) {
           ddef.symbol.addAnnotation(MacroImplAnnotation, ScalahostSignature(synthesizedImpl))
           ddef.symbol.addAnnotation(MacroImplAnnotation, LegacySignature())
           Some(EmptyTree)
@@ -105,60 +73,11 @@ trait Validation extends Signatures { self: Plugin =>
   }
 
   /**
-   * Verifies that the (typed) right hand side of a macro def (old syntax) is a valid parser macro
+   * Verifies that `typedDDef` is a valid parser macro implementation.
    */
-  private def verifyLegacyMacroImpl(typedSelect: Select): Boolean = {
-    val sym = typedSelect.symbol
+  private def verifyMacroImpl(typedDDef: DefDef): Boolean = {
 
-    if (!sym.isMethod) {
-      false
-    } else {
-      val macroImplSym = sym.asMethod
-
-      if (verifyMacroImpl(macroImplSym)) {
-
-        if (!macroImplSym.isStatic && !typedSelect.qualifier.symbol.isStatic) {
-          throw InvalidMacroShapeException(typedSelect.pos,
-            """macro implementation reference has wrong shape. Required:
-              |macro [<static object>].<method name>""".stripMargin)
-        }
-
-        true
-
-      } else false
-
-    }
-  }
-
-  /**
-   * Verifies that the (typed) `DefDef` (new syntax) can be used as a valid parser macro
-   */
-  private def verifyScalaMetaMacroImpl(typedDDef: DefDef): Boolean = {
-    val sym = typedDDef.symbol
-
-    if (!sym.isMethod) {
-      false
-    } else {
-      val macroImplSym = sym.asMethod
-
-      if (verifyMacroImpl(macroImplSym)) {
-
-        if (!typedDDef.symbol.owner.isStatic) {
-          throw InvalidMacroShapeException(typedDDef.pos,
-            """macro implementation reference has wrong shape. Required:
-              |macro [<static object>].<method name>""".stripMargin)
-        }
-
-        true
-
-      } else false
-    }
-  }
-
-  /**
-   * Verifies that `sym` represents a valid parser macro.
-   */
-  private def verifyMacroImpl(sym: MethodSymbol): Boolean = {
+    val sym = typedDDef.symbol.asMethod
     val params = sym.paramLists
 
     // We check whether all the parameters of this macro could be parser macro arguments. This
@@ -181,10 +100,15 @@ trait Validation extends Signatures { self: Plugin =>
         throw InvalidMacroShapeException(sym.pos, "macro implementation must be public.")
       }
 
+      if (!typedDDef.symbol.owner.isStatic) {
+        throw InvalidMacroShapeException(typedDDef.pos,
+          """macro implementation reference has wrong shape. Required:
+            |macro [<static object>].<method name>""".stripMargin)
+      }
+
       true
 
     } else false
   }
-
 
 }

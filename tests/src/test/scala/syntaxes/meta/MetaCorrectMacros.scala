@@ -29,16 +29,6 @@ trait MetaCorrectMacros extends ParserMacroSuite {
     "macros.LightweightMacros.compatibleReturnType#(hello)" shouldExpandTo "1"
   }
 
-  test("Accept a macro whose implementation is defined in an abstract parent") {
-    // This macro always return 1
-    "macros.ConcreteProvider.concreteImplInAbstractParent#(hello)" shouldExpandTo "1"
-  }
-
-  test("Accept a macro whose implementation is overridden from an abstract parent") {
-    // This macro always return 1
-    "macros.ConcreteProvider.overrideAbstractImplFromParent#(hello)" shouldExpandTo "1"
-  }
-
   test("Accept macros that have type parameters") {
     // This macro always return 1
     "macros.LightweightMacros.hasTypeParameters[Int]#(hello)" shouldExpandTo "1"

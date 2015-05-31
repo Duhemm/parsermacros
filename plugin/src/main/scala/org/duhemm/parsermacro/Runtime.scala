@@ -13,16 +13,6 @@ trait Runtime { self: Plugin =>
   import analyzer._
 
   /**
-   * Creates a MacroRuntime for a parser macro using the legacy syntax, using the informations
-   * stored in `binding`.
-   */
-  def legacyRuntime(binding: MacroImplBinding): Option[MacroRuntime] =
-    loader.findMethod(binding.className, binding.methName) map {
-      case (instance, method) =>
-        (x: MacroArgs) => loader.invoke(instance, method, x.others.asInstanceOf[Seq[AnyRef]])
-    }
-
-  /**
    * Creates a MacroRuntime for a parser macro using the new scala.meta syntax, using the informations
    * stored in `binding`.
    */
