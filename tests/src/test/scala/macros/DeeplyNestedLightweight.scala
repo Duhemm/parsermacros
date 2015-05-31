@@ -7,7 +7,7 @@ object DeeplyNestedParserMacro {
   object Deeply {
     object Nested {
       object Obj {
-        def foo(t: Seq[Token]) = macro {
+        def foo(t: Tokens) = macro {
           internal.ast.Lit.Int(1)
         }
       }

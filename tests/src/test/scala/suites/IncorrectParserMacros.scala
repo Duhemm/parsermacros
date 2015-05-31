@@ -12,14 +12,14 @@ trait IncorrectParserMacros extends ParserMacroSuite {
   test("Reject a macro whose owner is not an object") {
     """import scala.meta._
       |class Incorrect {
-      |  def hello(tokens: Seq[Token]) = macro { internal.ast.Lit.Int(1) }
+      |  def hello(tokens: Tokens) = macro { internal.ast.Lit.Int(1) }
       |}""".stripMargin shouldFailWith "macro implementation reference has wrong shape"
   }
 
   test("Reject a macro that has more than one parameter lists") {
     """import scala.meta._
       |object Incorrect {
-      |  def hello(t1: Seq[Token])(t2: Seq[Token]) = macro { internal.ast.Lit.Int(1) }
+      |  def hello(t1: Tokens)(t2: Tokens) = macro { internal.ast.Lit.Int(1) }
       |}""".stripMargin shouldFailWith "parser macro can have only one parameter list"
   }
 
@@ -32,19 +32,10 @@ trait IncorrectParserMacros extends ParserMacroSuite {
       |}""".stripMargin.shouldNotBeConsideredAParserMacro
   }
 
-  test("Reject a macro whose parameters are a subtype of `Seq[Token]`") {
-    // We just want to make sure that we determine that the macro implementation cannot be used
-    // as a parser macro, but don't output any error (after all, it may still be a valid whatever-you-want macro)
-    """import scala.meta._
-      |object Incorrect {
-      |  def hello(t: List[Token]) = macro { internal.ast.Lit.Int(1) }
-      |}""".stripMargin.shouldNotBeConsideredAParserMacro
-  }
-
   test("Reject a macro whose return type is incompatible with parser macros") {
     """import scala.meta._
       |object Incorrect {
-      |  def hello(t: Seq[Token]) = macro { 1 }
+      |  def hello(t: Tokens) = macro { 1 }
       |}""".stripMargin shouldFailWith "must return a value of type scala.meta.Tree"
   }
 
@@ -61,7 +52,7 @@ trait IncorrectParserMacros extends ParserMacroSuite {
   test("Reject parser macro with implicit parameters") {
     """import scala.meta._
       |object Incorrect {
-      |  def hello(implicit tokens: Seq[Token]): Tree = macro { internal.ast.Lit.Int(1) }
+      |  def hello(implicit tokens: Tokens): Tree = macro { internal.ast.Lit.Int(1) }
       |}""".stripMargin shouldFailWith "parser macro cannot have implicit parameters"
   }
 

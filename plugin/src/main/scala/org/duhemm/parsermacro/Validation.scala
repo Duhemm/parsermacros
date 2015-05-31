@@ -68,7 +68,7 @@ trait Validation extends Signatures { self: Plugin =>
    * This means that their types have to be supertypes of `Seq[scala.meta.Token]`.
    */
   private def parserMacroCompatibleParameters(params: List[Symbol]): Boolean = {
-    val expectedType = typeOf[_root_.scala.collection.Seq[_root_.scala.meta.syntactic.Token]]
+    val expectedType = typeOf[_root_.scala.meta.syntactic.Tokens]
     params forall (expectedType <:< _.typeSignature)
   }
 

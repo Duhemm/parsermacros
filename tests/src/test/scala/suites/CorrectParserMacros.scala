@@ -43,7 +43,7 @@ trait CorrectParserMacros extends ParserMacroSuite {
     pendingUntilFixed {
       """import scala.meta._
         |package object incorrect {
-        |  def hello(t: Seq[Token]): Tree = macro { internal.ast.Lit.Int(1) }
+        |  def hello(t: Tokens): Tree = macro { internal.ast.Lit.Int(1) }
         |}""".stripMargin.shouldCompile
     }
   }

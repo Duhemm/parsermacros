@@ -7,7 +7,7 @@ import scala.reflect.internal.util.Position
  * it to be used as a parser macro.
  * Parser macro implementation should be public methods defined in a static object, accepting only
  * one parameter list. All formal parameter types should be supertypes of
- * `scala.collection.Seq[scala.meta.syntactic.Token]`, and their return type should be a subtype
+ * `scala.meta.syntactic.Tokens`, and their return type should be a subtype
  * of `scala.meta.Tree`.
  */
 private[parsermacro] case class InvalidMacroShapeException(pos: Position, msg: String) extends Exception(msg)
