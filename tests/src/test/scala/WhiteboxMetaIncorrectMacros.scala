@@ -1,4 +1,4 @@
 import boxity.WhiteboxParserMacroSuite
-import syntaxes.meta.MetaIncorrectMacros
+import suites.IncorrectParserMacros
 
-class WhiteboxMetaIncorrectMacros extends WhiteboxParserMacroSuite with MetaIncorrectMacros
+class WhiteboxMetaIncorrectMacros extends WhiteboxParserMacroSuite with IncorrectParserMacros

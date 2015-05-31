@@ -13,26 +13,13 @@ trait Runtime { self: Plugin =>
   import analyzer._
 
   /**
-   * Creates a MacroRuntime for a parser macro using the new scala.meta syntax, using the informations
-   * stored in `binding`.
+   * Creates a MacroRuntime for a parser macro.
    */
-  def scalametaRuntime(binding: DefDef): Option[MacroRuntime] = {
-
-      /**
-       * Computes the correct name for the object that holds the implementation we're looking for.
-       */
-      def erasedName(sym: Symbol): String = {
-        def rootOrEmpty(sym: Symbol) = sym.isEmptyPackageClass || sym.isRoot
-        sym.ownersIterator.takeWhile(!rootOrEmpty(_)).toList.reverse.partition(_.hasPackageFlag) match {
-          case (Nil, objs)  => objs.map(_.name).mkString("", "$", "$")
-          case (pkgs, objs) => pkgs.map(_.name).mkString(".") + (objs.map(_.name).mkString(".", "$", "$"))
-        }
-      }
-
+  def parserMacroRuntime(binding: DefDef): Option[MacroRuntime] = {
       val runtime =
         (x: MacroArgs) => {
           val context = x.c
-          val className = erasedName(context.macroApplication.symbol.owner)
+          val className = erasedName(binding.symbol.owner)
           val methName = binding.name.toString + "$impl"
 
           loader.findMethod(className, methName) map {

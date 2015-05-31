@@ -3,7 +3,7 @@ package deeply.nested.pkg
 
 import scala.meta._
 
-object DeeplyNestedLightweight {
+object DeeplyNestedParserMacro {
   object Deeply {
     object Nested {
       object Obj {

@@ -17,10 +17,10 @@ trait Validation extends Signatures { self: Plugin =>
   }
 
   /**
-   * Extractor for parser macro implemenations that use the scala.meta macro syntax:
+   * Extractor for parser macro implementations. They have to use the scala.meta macro syntax:
    *   def foo: Any = macro { ... }
    */
-  object LightweightParserMacroImpl {
+  object ParserMacroImpl {
     def unapply(tree: Tree): Option[(Modifiers, TermName, List[TypeDef], List[List[ValDef]], Tree, Tree)] = tree match {
       case DefDef(mods, name, tparams, vparamss, tpt, rhs) if isLightweightSyntax(rhs) && mods.hasFlag(MACRO) =>
         Some((mods, name, tparams, vparamss, tpt, rhs))
@@ -37,10 +37,10 @@ trait Validation extends Signatures { self: Plugin =>
   def verifyMacroShape(typer: Typer, ddef: DefDef): Option[Tree] = {
 
     ddef match {
-      case LightweightParserMacroImpl(_, _, _, _, _, _) =>
+      case ParserMacroImpl(_, _, _, _, _, _) =>
         val q"{ ${synthesizedImpl: DefDef}; () }" = typer.typed(q"{ ${synthesizeMacroImpl(ddef)}; () }")
         if (verifyMacroImpl(synthesizedImpl)) {
-          ddef.symbol.addAnnotation(MacroImplAnnotation, ScalahostSignature(synthesizedImpl))
+          ddef.symbol.addAnnotation(MacroImplAnnotation, ParserMacroSignature(synthesizedImpl))
           ddef.symbol.addAnnotation(MacroImplAnnotation, LegacySignature())
           Some(EmptyTree)
         } else None
@@ -58,7 +58,7 @@ trait Validation extends Signatures { self: Plugin =>
    * of this synthetic node, and so on.
    */
   def synthesizeMacroImpl(ddef: DefDef): DefDef = {
-    val LightweightParserMacroImpl(mods, name, tparams, vparamss, tpt, rhs) = ddef
+    val ParserMacroImpl(mods, name, tparams, vparamss, tpt, rhs) = ddef
     val newMods = mods &~ MACRO // The synthesized impl is not a macro
     atPos(ddef.pos)(q"$newMods def $name[..$tparams](...$vparamss): $tpt = $rhs")
   }

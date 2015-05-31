@@ -28,17 +28,17 @@ trait Signatures { self: UniverseUtils =>
   }
 
   object LegacySignature extends FixupSignature {
-    def apply(): Tree = fixup(Apply(Ident(TermName("macro")), List(Assign(Literal(Constant("macroEngine")), Literal(Constant("Scalahost experimental macro engine compatible with scala.meta APIs"))))))
+    def apply(): Tree = fixup(Apply(Ident(TermName("macro")), List(Assign(Literal(Constant("macroEngine")), Literal(Constant("Parser macro experimental macro engine compatible with scala.meta APIs"))))))
   }
 
-  object ScalahostSignature extends FixupSignature {
+  object ParserMacroSignature extends FixupSignature {
     def apply(implDdef: DefDef): Tree = {
-      fixup(Apply(Ident(TermName("ScalametaMacro")), List(
+      fixup(Apply(Ident(TermName("ParserMacro")), List(
         Assign(Literal(Constant("implDdef")), implDdef))))
     }
     def unapply(tree: Tree): Option[DefDef] = {
       tree match {
-        case Apply(Ident(TermName("ScalametaMacro")), List(
+        case Apply(Ident(TermName("ParserMacro")), List(
           Assign(Literal(Constant("implDdef")), (implDdef: DefDef)))) => Some(implDdef)
         case _ => None
       }

@@ -1,12 +1,12 @@
-package syntaxes.meta
+package suites
 
 import boxity.ParserMacroSuite
 
-trait MetaIncorrectMacros extends ParserMacroSuite {
+trait IncorrectParserMacros extends ParserMacroSuite {
 
   test("Expansion should match the expected type") {
     // This macro returns an Int, we are assigning it to a Boolean variable
-    "val hello: Boolean = macros.LightweightMacros.countTokens#(hello world)" shouldFailWith "type mismatch"
+    "val hello: Boolean = macros.ParserMacros.countTokens#(hello world)" shouldFailWith "type mismatch"
   }
 
   test("Reject a macro whose owner is not an object") {
@@ -50,12 +50,12 @@ trait MetaIncorrectMacros extends ParserMacroSuite {
 
   test("Fail on multi parameter macros when not enough arguments are given") {
     // This macro normally takes 2 arguments
-    "macros.LightweightMacros.multiParameter#(hello)" shouldFailWith "parser macro expected 2 but got 1 argument"
+    "macros.ParserMacros.multiParameter#(hello)" shouldFailWith "parser macro expected 2 but got 1 argument"
   }
 
   test("Fail on multi parameter macros when too many arguments are given") {
     // This macro normally takes 2 arguments
-    "macros.LightweightMacros.multiParameter#(hello)#(world)#(!)" shouldFailWith "parser macro expected 2 but got 3 arguments"
+    "macros.ParserMacros.multiParameter#(hello)#(world)#(!)" shouldFailWith "parser macro expected 2 but got 3 arguments"
   }
 
   test("Reject parser macro with implicit parameters") {

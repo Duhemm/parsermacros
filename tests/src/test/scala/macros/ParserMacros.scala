@@ -2,7 +2,7 @@ package macros
 import scala.meta._
 import scala.meta.dialects.Scala211
 
-object LightweightMacros {
+object ParserMacros {
   // Yes, this is overly complicated: I just want to make sure that
   // we can put whatever we want in the lightweight syntax.
   def countTokens(tokens: Seq[Token]): Tree = macro {

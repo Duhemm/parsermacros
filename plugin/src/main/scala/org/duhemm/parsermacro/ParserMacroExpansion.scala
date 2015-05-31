@@ -59,7 +59,7 @@ class ExpandParserMacro(val c: Context) extends UniverseUtils
       case ann if ann.tree.tpe.toString == macroImplType => ann.tree.children.tail
     } match {
       case _ :: List(signature) :: Nil =>
-        val ScalahostSignature(ddef) = signature.asInstanceOf[universe.Tree]
+        val ParserMacroSignature(ddef) = signature.asInstanceOf[universe.Tree]
         val className = erasedName(ddef.symbol.owner)
         val methName = ddef.name.toString + "$impl"
         loader.findMethod(className, methName)

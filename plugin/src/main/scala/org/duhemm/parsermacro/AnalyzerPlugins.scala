@@ -31,9 +31,9 @@ trait AnalyzerPlugins extends Traces
      * to be treated uniformly, so I'm leaving this for future work.
      */
     override def pluginsEnterStats(typer: Typer, stats: List[Tree]): List[Tree] = stats flatMap {
-      // Whenever we encounter a lightweight parser macro definition, we synthesize a private implementation that will
+      // Whenever we encounter a parser macro definition, we synthesize a private implementation that will
       // be executed whenever we expand the macro.
-      case ddef @ LightweightParserMacroImpl(_, name, _, _, _, _) =>
+      case ddef @ ParserMacroImpl(_, name, _, _, _, _) =>
         val synthesized = copyDefDef(synthesizeMacroImpl(ddef.asInstanceOf[DefDef]))(mods = Modifiers(PRIVATE), name = TermName(name + "$impl"))
         newNamer(typer.context) enterSym synthesized
         List(synthesized, ddef)
@@ -156,8 +156,7 @@ trait AnalyzerPlugins extends Traces
     override def pluginsMacroRuntime(expandee: Tree): Option[MacroRuntime] = {
       expandee match {
         case ParserMacroApplication(_, _, ddef) =>
-
-          scalametaRuntime(ddef)
+          parserMacroRuntime(ddef)
 
         case _ =>
           None
@@ -175,7 +174,7 @@ trait AnalyzerPlugins extends Traces
           case ParserMacroArgumentsAttachment(arguments) :: Nil =>
             tree.symbol.annotations filter (_.atp.typeSymbol == MacroImplAnnotation) match {
 
-              case _ :: AnnotationInfo(_, List(ScalahostSignature(ddef)), _) :: Nil =>
+              case _ :: AnnotationInfo(_, List(ParserMacroSignature(ddef)), _) :: Nil =>
                 Some((tree, arguments, ddef))
 
               case _ =>

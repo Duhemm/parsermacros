@@ -1,4 +1,4 @@
 import boxity.BlackboxParserMacroSuite
-import syntaxes.meta.MetaIncorrectMacros
+import suites.IncorrectParserMacros
 
-class BlackboxMetaIncorrectMacros extends BlackboxParserMacroSuite with MetaIncorrectMacros
+class BlackboxMetaIncorrectMacros extends BlackboxParserMacroSuite with IncorrectParserMacros
