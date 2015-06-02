@@ -45,20 +45,6 @@ lazy val usePluginSettings = Seq(
   }
 )
 
-lazy val quasiquotesMacros: Project =
-  (project in file("quasiquotes-macros")) settings (
-    sharedSettings: _*
-  ) settings (
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
-  )
-
-lazy val quasiquotes: Project =
-  (project in file("quasiquotes")) settings (
-    sharedSettings ++ testSettings: _*
-  ) settings (
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
-  ) aggregate quasiquotesMacros dependsOn quasiquotesMacros
-
 lazy val plugin: Project =
   (project in file("plugin")) settings (
     sharedSettings: _*
@@ -83,9 +69,8 @@ lazy val plugin: Project =
     initialCommands in console := """
       import scala.meta._
       import scala.meta.dialects.Scala211
-      import scala.meta.tokenquasiquotes._
     """
-  ) dependsOn quasiquotes
+  )
 
 lazy val sandboxMacros: Project =
   (project in file("sandbox-macros")) settings (
@@ -93,7 +78,7 @@ lazy val sandboxMacros: Project =
   ) settings (
     publishArtifact in Compile := false,
     compile <<= (compile in Compile)
-  ) dependsOn quasiquotes
+  )
 
 lazy val sandboxClients =
   (project in file("sandbox-clients")) settings (
