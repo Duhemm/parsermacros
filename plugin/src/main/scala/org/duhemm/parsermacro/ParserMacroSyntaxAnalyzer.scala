@@ -44,7 +44,8 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer with ParserMa
     }
 
     override def templateStat: PartialFunction[Token, List[Tree]] = {
-      case t: Token => super.templateStat(t) map transformParserMacroApplication
+      case t: Token if super.templateStat isDefinedAt t =>
+        super.templateStat(t) map transformParserMacroApplication
     }
 
     override def topStat: PartialFunction[Token, List[Tree]] = {
