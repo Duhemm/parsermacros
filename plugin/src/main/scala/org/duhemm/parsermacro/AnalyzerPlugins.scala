@@ -72,7 +72,15 @@ trait AnalyzerPlugins extends Traces
      *
      * $nonCumulativeReturnValueDoc.
      */
-    override def pluginsIsBlackbox(macroDef: Symbol): Option[Boolean] = Some(true)
+    override def pluginsIsBlackbox(macroDef: Symbol): Option[Boolean] =
+      macroDef.annotations filter (_.atp.typeSymbol == MacroImplAnnotation) match {
+        case _ :: AnnotationInfo(_, List(ParserMacroSignature(_)), _) :: Nil =>
+          Some(false)
+        case _ =>
+          None
+    }
+
+
 
     /**
      * Expands an application of a def macro (i.e. of a symbol that has the MACRO flag set),
