@@ -52,4 +52,8 @@ trait CorrectParserMacros extends ParserMacroSuite {
     // This macro always return 1
     "macros.deeply.nested.pkg.DeeplyNestedParserMacro.Deeply.Nested.Obj.foo#(hello)" shouldExpandTo "1"
   }
+
+  test("Expand parser macros defined in the empty package") {
+    "InEmptyPackage.foo#(hello)" shouldExpandTo "1"
+  }
 }
