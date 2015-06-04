@@ -12,9 +12,9 @@ trait UniverseUtils {
    */
   def erasedName(sym: Symbol): String = {
     def rootOrEmpty(sym: Symbol) = {
-      val rootSym = symbolOf[scala.Any].owner.owner
-      val emptySym = rootSym.info.decls.find(_.name.toString == "<empty>").get
-      sym == rootSym || sym == emptySym
+      val rootSym = rootMirror.RootClass
+      val emptyPackageClassSym = rootMirror.EmptyPackageClass
+      sym == rootSym || sym == emptyPackageClassSym
     }
 
     def ownersOf(sym: Symbol): Stream[Symbol] = sym.owner #:: ownersOf(sym.owner)
