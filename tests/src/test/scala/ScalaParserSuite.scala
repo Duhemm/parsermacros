@@ -30,7 +30,19 @@ class ScalaParserSuite extends ParserMacroSuite {
   }
 
   test("Multi-parameters parser macro applications should be accepted in top level position") {
-    "foo.bar#(hello)#(world)".shouldParse
+    "foo.bar#(hello)(world)".shouldParse
+  }
+
+  test("Parser macro application with balanced parentheses in argument should parse") {
+    "foo.bar#(hello(w(o(r(l({{}}d)f)o)o)b)a)".shouldParse
+  }
+
+  test("Multi-parameter parser macro application with balanced parentheses in arguments should parse") {
+    "foo.bar#(h(e{l}l)o){w(o(r(l(d))))}".shouldParse
+  }
+
+  test("Parser macro application with unbalanced parentheses in arguments should not parse") {
+    "foo.bar#{(hello}" shouldNotParseWith "expected ')', but eof found."
   }
 
   test("Parsing two parser macro application following each other") {

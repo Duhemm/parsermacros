@@ -11,7 +11,7 @@ trait CorrectParserMacros extends ParserMacroSuite {
 
   test("Expand multi parameter parser macro") {
     // This macro always returns 1
-    "macros.ParserMacros.multiParameter#(hello)#(world)" shouldExpandTo "1"
+    "macros.ParserMacros.multiParameter#(hello)(world)" shouldExpandTo "1"
   }
 
   test("Vanilla macros should still work") {

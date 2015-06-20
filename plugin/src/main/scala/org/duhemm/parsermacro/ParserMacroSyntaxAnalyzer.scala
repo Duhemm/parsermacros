@@ -8,6 +8,7 @@ import scala.tools.nsc.ast.parser.Tokens._
 
 import scala.reflect.internal.Flags
 import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.Stack
 
 // Partially taken from scalameta/scalahost
 /**
@@ -66,24 +67,35 @@ abstract class ParserMacroSyntaxAnalyzer extends NscSyntaxAnalyzer with ParserMa
     private def parserMacroApplication(t: Tree): Tree = {
       in.token match {
         case HASH =>
+          def isOpeningParenOrBrace(t: Token) = t == LPAREN || t == LBRACE
+          def closingFor(t: Token) = t match {
+            case LPAREN => RPAREN
+            case LBRACE => RBRACE
+            case _      => ???
+          }
+          in.nextToken()
           val macroParserArgs = new ListBuffer[String]
-          while(in.token == HASH) {
-            in.nextToken()
-            val endToken = in.token match {
-              case LPAREN => RPAREN
-              case LBRACE => RBRACE
-              case other  => syntaxErrorOrIncompleteAnd(s"'(' or '{' expected but ${token2string(other)} found.", skipIt = true)(ERROR)
-            }
-            // `in.offset` is the offset of the closing parenthesis / brace. We take the immediate next character,
-            // so that we don't lose comments at the very beginning of the parser macro application.
+
+          while (isOpeningParenOrBrace(in.token)) {
+            val closingStack = Stack(closingFor(in.token))
             val start = in.offset + 1
-            in.nextToken()
-            while(in.token != endToken && in.token != ERROR && in.token != EOF) {
+
+            while (!closingStack.isEmpty && in.token != ERROR && in.token != EOF) {
               in.nextToken()
+              if (isOpeningParenOrBrace(in.token)) {
+                closingStack push closingFor(in.token)
+              } else if (in.token == closingStack.head) {
+                closingStack.pop()
+              }
             }
+
+            if (!closingStack.isEmpty) {
+              syntaxErrorOrIncompleteAnd(s"expected ${token2string(closingStack.head)}, but ${token2string(in.token)} found.", skipIt = true)(EmptyTree)
+            }
+
             val end = in.offset
-            macroParserArgs += in.buf.slice(start, end).mkString("")
-            accept(endToken)
+            in.nextToken()
+            macroParserArgs += in.buf.slice(start, end) mkString ""
           }
           t updateAttachment ParserMacroArgumentsAttachment(macroParserArgs.toList)
 

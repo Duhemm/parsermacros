@@ -46,7 +46,7 @@ trait IncorrectParserMacros extends ParserMacroSuite {
 
   test("Fail on multi parameter macros when too many arguments are given") {
     // This macro normally takes 2 arguments
-    "macros.ParserMacros.multiParameter#(hello)#(world)#(!)" shouldFailWith "parser macro expected 2 but got 3 arguments"
+    "macros.ParserMacros.multiParameter#(hello)(world)(!)" shouldFailWith "parser macro expected 2 but got 3 arguments"
   }
 
   test("Reject parser macro with implicit parameters") {
