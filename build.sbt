@@ -57,6 +57,7 @@ lazy val plugin: Project =
     assemblyMergeStrategy in assembly := {
       // scalahost also provides `scalac-plugin.xml`, but we are only interested in ours.
       case "scalac-plugin.xml"                           => MergeStrategy.first
+      case x if x endsWith "Interpreter$.class"          => MergeStrategy.first
       case x =>
         val oldStrategy = (assemblyMergeStrategy in assembly).value
         oldStrategy(x)
