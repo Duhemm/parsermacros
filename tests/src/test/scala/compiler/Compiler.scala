@@ -116,7 +116,11 @@ object Compiler {
    * Doesn't modify the code if it doesn't need to be wrapped
    */
   private def wrap(code: String): String = {
-    if (code.startsWith("package") || code.startsWith("class") || code.startsWith("object")) code
+    if (code startsWith "import") {
+      val Array(imp, rest @ _*) = code split "\n"
+      imp + "\n" + wrap(rest mkString "\n")
+    }
+    else if (code.startsWith("package") || code.startsWith("class") || code.startsWith("object")) code
     else s"class Compilation { $code }"
   }
 

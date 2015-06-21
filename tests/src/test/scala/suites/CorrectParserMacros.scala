@@ -40,12 +40,10 @@ trait CorrectParserMacros extends ParserMacroSuite {
   }
 
   test("Accept macros defined inside a package object") {
-    pendingUntilFixed {
-      """import scala.meta._
-        |package object incorrect {
-        |  def hello(t: Tokens): Tree = macro { internal.ast.Lit.Int(1) }
-        |}""".stripMargin.shouldCompile
-    }
+    """import scala.meta._
+      |package object incorrect {
+      |  def hello(t: Tokens): Tree = macro { internal.ast.Lit.Int(1) }
+      |}""".stripMargin.shouldCompile
   }
 
   test("Accept macros defined in a deeply nested package") {
