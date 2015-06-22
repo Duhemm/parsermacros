@@ -47,11 +47,8 @@ lazy val usePluginSettings = Seq(
 
 val duplicatedFiles = Set(
   // scalahost also provides `scalac-plugin.xml`, but we are only interested in ours.
-  "scalac-plugin.xml",
-  // It looks like there's a huge conflict between scalahost and scala.meta...
-  // We keep the classfiles from scala.meta in case of conflict.
-  ".class"
-  )
+  "scalac-plugin.xml"
+ )
 
 lazy val plugin: Project =
   (project in file("plugin")) settings (
