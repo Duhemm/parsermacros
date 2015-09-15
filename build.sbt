@@ -89,7 +89,8 @@ lazy val plugin: Project =
 
 lazy val sbtParsermacros: Project =
   (project in file("sbt-plugin")) settings (
-    sharedSettings,
+    bintraySettings,
+    organization := "org.duhemm",
     name := "sbt-parsermacros",
     sbtPlugin := true
   )
