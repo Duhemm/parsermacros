@@ -1,18 +1,20 @@
 val scalaHomeProperty = "macroparser.scala.home"
+
+lazy val bintraySettings: Seq[Setting[_]] = Seq(
+  bintrayOrganization := Some("duhemm"),
+  bintrayRepository := "parsermacros",
+  bintrayVcsUrl := Some("git@github.com:Duhemm/parsermacros.git")
+)
+
 lazy val sharedSettings: Seq[Setting[_]] = Seq(
   version := "0.1.0-SNAPSHOT",
   scalaVersion := "2.11.6",
+  organization := "org.duhemm",
   resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
   libraryDependencies += "org.scalameta" %% "scalameta" % "0.1.0-SNAPSHOT",
   libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
-  scalaHome := {
-    System getProperty scalaHomeProperty match {
-      case null =>
-        None
-      case scalaHome => Some(file(scalaHome))
-    }
-  }
-)
+  scalaHome := sys.props get scalaHomeProperty map file
+) ++ bintraySettings
 
 lazy val testSettings: Seq[Setting[_]] = Seq(
   libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test",
@@ -56,7 +58,7 @@ lazy val plugin: Project =
     sharedSettings: _*
   ) settings (
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full),
-    libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _),
+    libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _ % "provided"),
     libraryDependencies += "org.scalameta" % "scalahost" % "0.1.0-SNAPSHOT" cross CrossVersion.full,
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false, includeDependency = true),
     assemblyJarName in assembly := pluginJarName,
@@ -74,7 +76,21 @@ lazy val plugin: Project =
     initialCommands in console := """
       import scala.meta._
       import scala.meta.dialects.Scala211
-    """
+    """,
+    publishArtifact in (Compile, packageBin) := false,
+    publishArtifact in (Compile, assembly) := true,
+    artifact in (Compile, assembly) := {
+      val art = (artifact in (Compile, assembly)).value
+      art.copy(`classifier` = None)
+    },
+    addArtifact(artifact in (Compile, assembly), assembly)
+  )
+
+lazy val sbtParsermacros: Project =
+  (project in file("sbt-plugin")) settings (
+    sharedSettings,
+    name := "sbt-parsermacros",
+    sbtPlugin := true
   )
 
 lazy val sandboxMacros: Project =
