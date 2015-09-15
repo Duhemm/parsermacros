@@ -3,7 +3,8 @@ val scalaHomeProperty = "macroparser.scala.home"
 lazy val bintraySettings: Seq[Setting[_]] = Seq(
   bintrayOrganization := Some("duhemm"),
   bintrayRepository := "parsermacros",
-  bintrayVcsUrl := Some("git@github.com:Duhemm/parsermacros.git")
+  bintrayVcsUrl := Some("git@github.com:Duhemm/parsermacros.git"),
+  licenses += ("BSD", url("https://github.com/Duhemm/parsermacros/blob/master/LICENSE"))
 )
 
 lazy val sharedSettings: Seq[Setting[_]] = Seq(
