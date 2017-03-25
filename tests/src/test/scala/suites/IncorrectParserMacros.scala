@@ -12,14 +12,14 @@ trait IncorrectParserMacros extends ParserMacroSuite {
   test("Reject a macro whose owner is not an object") {
     """import scala.meta._
       |class Incorrect {
-      |  def hello(tokens: Tokens) = macro { internal.ast.Lit.Int(1) }
+      |  def hello(tokens: Tokens) = macro { scala.meta.Lit(1) }
       |}""".stripMargin shouldFailWith "macro implementation reference has wrong shape"
   }
 
   test("Reject a macro that has more than one parameter lists") {
     """import scala.meta._
       |object Incorrect {
-      |  def hello(t1: Tokens)(t2: Tokens) = macro { internal.ast.Lit.Int(1) }
+      |  def hello(t1: Tokens)(t2: Tokens) = macro { scala.meta.Lit(1) }
       |}""".stripMargin shouldFailWith "parser macro can have only one parameter list"
   }
 
@@ -28,7 +28,7 @@ trait IncorrectParserMacros extends ParserMacroSuite {
     // as a parser macro, but don't output any error (after all, it may still be a valid whatever-you-want macro)
     """import scala.meta._
       |object Incorrect {
-      |  def hello(x: Map[Int, String]) = macro { internal.ast.Lit.Int(1) }
+      |  def hello(x: Map[Int, String]) = macro { scala.meta.Lit(1) }
       |}""".stripMargin.shouldNotBeConsideredAParserMacro
   }
 
@@ -52,7 +52,7 @@ trait IncorrectParserMacros extends ParserMacroSuite {
   test("Reject parser macro with implicit parameters") {
     """import scala.meta._
       |object Incorrect {
-      |  def hello(implicit tokens: Tokens): Tree = macro { internal.ast.Lit.Int(1) }
+      |  def hello(implicit tokens: Tokens): Tree = macro { scala.meta.Lit(1) }
       |}""".stripMargin shouldFailWith "parser macro cannot have implicit parameters"
   }
 

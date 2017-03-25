@@ -8,6 +8,14 @@ import scala.reflect.internal.Mode
 import scala.reflect.internal.Flags
 import scala.reflect.internal.Flags._
 
+import scala.meta.{Token, Tokens}
+import scala.meta.Mirror
+
+import scala.tools.nsc.reporters.StoreReporter
+import scala.compat.Platform.EOL
+import scala.meta.prettyprinters.{Syntax, Structure}
+import scala.meta.internal.prettyprinters.Summary
+
 trait AnalyzerPlugins extends Traces
                       with Validation
                       with Runtime { self: Plugin =>
@@ -80,7 +88,35 @@ trait AnalyzerPlugins extends Traces
           None
     }
 
-
+    def toGtree(mtree: scala.meta.Tree): global.Tree = {
+      // TODO: LOLOLOL
+      def fail(msg: String) = {
+        val details = s"$EOL$msg$EOL${mtree.show[Syntax]}$EOL${mtree.show[Structure]}"
+        sys.error(s"implementation restriction: error converting from ${mtree.show[Summary]} to g.Tree:$details")
+      }
+      val scode = {
+        import scala.meta.dialects.Scala211
+        mtree.show[Syntax]
+      }
+      val g: global.type = global
+      val gcode = {
+        val newReporter = new StoreReporter()
+        val oldReporter = g.reporter
+        try {
+          g.reporter = newReporter
+          val gparser = g.newUnitParser(new g.CompilationUnit(g.newSourceFile(scode, "<toGtree>")))
+          val gtree = mtree match {
+            case _: scala.meta.Source => gparser.compilationUnit()
+            case _: scala.meta.Term => gparser.expr()
+            case _: scala.meta.Type => gparser.typ()
+            case _ => fail(s"scala.meta trees of type ${mtree.productPrefix} are unsupported")
+          }
+          newReporter.infos.foreach { case newReporter.Info(pos, msg, newReporter.ERROR) => fail(msg) }
+          gtree
+        } finally g.reporter = oldReporter
+      }
+      gcode
+    }
 
     /**
      * Expands an application of a def macro (i.e. of a symbol that has the MACRO flag set),
@@ -108,13 +144,11 @@ trait AnalyzerPlugins extends Traces
 
           try {
             runtime(arguments) match {
-              case expanded: scala.meta.internal.ast.Tree =>
-                import scala.meta.dialects.Scala211
-                import scala.meta.Scalahost
+              case expanded: scala.meta.Tree =>
+                import scala.meta.internal.scalahost.converters.Converter
 
-                val gTree = Scalahost.mkGlobalContext(global).toGtree(expanded).asInstanceOf[Tree]
+                val gTree: global.analyzer.global.Tree = toGtree(expanded)
                 Some(typer.typed(gTree, pt))
-
               case _ =>
                 None
             }
@@ -144,7 +178,13 @@ trait AnalyzerPlugins extends Traces
         case ParserMacroApplication(treeInfo.Applied(core, _, _), rawArguments, _) =>
           val prefix = core match { case Select(qual, _) => qual ; case _ => EmptyTree }
           val context = macroContext(typer, prefix, expandee)
-          val tokenized = rawArguments map string2input map (_.tokens)
+
+          val mirror = Mirror(global)
+          val tokenized: List[Tokens] =
+            rawArguments.map { string2input }.map { in =>
+              mirror.dialect(in).tokenize.get
+            }
+
           Some(MacroArgs(context, tokenized))
 
         case _ => None

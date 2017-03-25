@@ -42,7 +42,7 @@ trait CorrectParserMacros extends ParserMacroSuite {
   test("Accept macros defined inside a package object") {
     """import scala.meta._
       |package object incorrect {
-      |  def hello(t: Tokens): Tree = macro { internal.ast.Lit.Int(1) }
+      |  def hello(t: Tokens): Tree = macro { scala.meta.Lit(1) }
       |}""".stripMargin.shouldCompile
   }
 

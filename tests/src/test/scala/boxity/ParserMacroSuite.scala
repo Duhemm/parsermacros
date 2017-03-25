@@ -52,6 +52,7 @@ trait ParserMacroSuite extends FunSuite {
         fail("An error was expected during the compilation, but none was issued.")
       } catch {
         case err @ CompilationFailed(msg) =>
+          println("couldn't compile " + code)
           assert(msg contains expected)
       }
     }

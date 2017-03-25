@@ -8,11 +8,11 @@ lazy val bintraySettings: Seq[Setting[_]] = Seq(
 )
 
 lazy val sharedSettings: Seq[Setting[_]] = Seq(
-  version := "0.1.0-SNAPSHOT",
-  scalaVersion := "2.11.6",
+  version := "0.1.1",
+  scalaVersion := "2.11.8",
   organization := "org.duhemm",
   resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-  libraryDependencies += "org.scalameta" %% "scalameta" % "0.1.0-SNAPSHOT",
+  libraryDependencies += "org.scalameta" % "scalameta_2.11" % "1.6.0",
   libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
   scalaHome := sys.props get scalaHomeProperty map file
 ) ++ bintraySettings
@@ -22,7 +22,7 @@ lazy val testSettings: Seq[Setting[_]] = Seq(
   libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.12.2" % "test",
   // We depend on Macro Paradise, because we need its JAR on the classpath to give it to
   // the test compiler.
-  libraryDependencies += "org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full,
+  libraryDependencies += "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full,
   fullClasspath in Test := {
     val testcp = (fullClasspath in Test).value.files.map(_.getAbsolutePath).mkString(java.io.File.pathSeparatorChar.toString)
     sys.props("sbt.class.directory") = testcp
@@ -58,9 +58,9 @@ lazy val plugin: Project =
   (project in file("plugin")) settings (
     sharedSettings: _*
   ) settings (
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
     libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _ % "provided"),
-    libraryDependencies += "org.scalameta" % "scalahost" % "0.1.0-SNAPSHOT" cross CrossVersion.full,
+    libraryDependencies += "org.scalameta" % "scalahost_2.11.8" % "1.6.0",
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false, includeDependency = true),
     assemblyJarName in assembly := pluginJarName,
     assemblyMergeStrategy in assembly := {
