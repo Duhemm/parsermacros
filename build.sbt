@@ -8,11 +8,11 @@ lazy val bintraySettings: Seq[Setting[_]] = Seq(
 )
 
 lazy val sharedSettings: Seq[Setting[_]] = Seq(
-  version := "0.1.1",
+  version := "0.1.1-SNAPSHOT",
   scalaVersion := "2.11.8",
   organization := "org.duhemm",
   resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-  libraryDependencies += "org.scalameta" % "scalameta_2.11" % "1.6.0",
+  libraryDependencies += "org.scalameta" %% "scalameta" % "1.6.0",
   libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
   scalaHome := sys.props get scalaHomeProperty map file
 ) ++ bintraySettings
