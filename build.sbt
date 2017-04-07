@@ -58,9 +58,12 @@ lazy val plugin: Project =
   (project in file("plugin")) settings (
     sharedSettings: _*
   ) settings (
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
-    libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _ % "provided"),
-    libraryDependencies += "org.scalameta" % "scalahost_2.11.8" % "1.6.0",
+    addCompilerPlugin(
+      "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
+    libraryDependencies <+=
+      (scalaVersion)("org.scala-lang" % "scala-compiler" % _ % "provided"),
+    libraryDependencies +=
+      "org.scalameta" % "scalahost" % "1.6.0" cross CrossVersion.full,
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false, includeDependency = true),
     assemblyJarName in assembly := pluginJarName,
     assemblyMergeStrategy in assembly := {
