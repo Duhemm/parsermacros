@@ -8,7 +8,7 @@ object DeeplyNestedParserMacro {
     object Nested {
       object Obj {
         def foo(t: Tokens) = macro {
-          internal.ast.Lit.Int(1)
+          scala.meta.Lit(1)
         }
       }
     }

@@ -10,6 +10,7 @@ import scala.annotation.compileTimeOnly
 
 import scala.meta.dialects.Scala211
 import scala.meta.Input.String.{ apply => string2input }
+import scala.meta.{Token, Tokens}
 
 import java.lang.reflect.Method
 
@@ -27,7 +28,21 @@ class ExpandParserMacro(val c: Context) extends UniverseUtils
 
     val q"new $_($originalTree).macroTransform($_)" = c.macroApplication
     val TemporaryObject(rawArguments) = annottee
-    val arguments = rawArguments map string2input map (_.tokens)
+
+    // get classpath and sourcepath from env vars
+    val sys = new scala.sys.SystemProperties()
+    val cp: String =
+      sys.getOrElse("CLASSPATH", sys.getOrElse("sbt.class.directory", ""))
+    val sp: String = "src/"
+
+    // Warning, normally we put
+    // val mirror = scala.meta.Mirror(global)
+    // here
+    val mirror = new scala.meta.internal.scalahost.v1.offline.Mirror(cp, sp)
+    val arguments: List[Tokens] = rawArguments.map { string2input }.map { in =>
+      mirror.dialect(in).tokenize.get
+    }
+
     val typechecked = c.typecheck(originalTree, mode = c.TYPEmode)
     val methodSymbol = typechecked.symbol.asMethod
 
