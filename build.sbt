@@ -13,7 +13,7 @@ lazy val sharedSettings: Seq[Setting[_]] = Seq(
   organization := "org.duhemm",
   resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
   libraryDependencies += "org.scalameta" %% "scalameta" % "1.6.0",
-  libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
+  libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
   scalaHome := sys.props get scalaHomeProperty map file
 ) ++ bintraySettings
 
@@ -36,7 +36,8 @@ lazy val testSettings: Seq[Setting[_]] = Seq(
 val pluginJarName = "fat-plugin.jar"
 
 lazy val usePluginSettings = Seq(
-  scalacOptions in Compile <++= (Keys.`package` in (plugin, Compile)) map { (jar: File) =>
+  scalacOptions in Compile ++= {
+    val jar = (Keys.`package` in (plugin, Compile)).value
     val fatJar = file(jar.getParent + "/" + pluginJarName)
     System.setProperty("sbt.paths.plugin.jar", fatJar.getAbsolutePath)
     val addPlugin = "-Xplugin:" + fatJar.getAbsolutePath
@@ -60,8 +61,8 @@ lazy val plugin: Project =
   ) settings (
     addCompilerPlugin(
       "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
-    libraryDependencies <+=
-      (scalaVersion)("org.scala-lang" % "scala-compiler" % _ % "provided"),
+    libraryDependencies +=
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided",
     libraryDependencies +=
       "org.scalameta" % "scalahost" % "1.6.0" cross CrossVersion.full,
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false, includeDependency = true),
@@ -75,8 +76,11 @@ lazy val plugin: Project =
     // Produce a fat jar containing dependencies of the plugin after compilation. This is required because the plugin
     // depends on scala.meta, which must therefore be available when the plugin is run.
     // It looks like this task is defined in the wrong order (assembly and then compilation), but it seems to work fine.
-    compile <<= (compile in Compile) dependsOn assembly,
-    resourceDirectory in Compile <<= baseDirectory(_ / "src" / "main" / "scala" / "org" / "duhemm" / "parsermacro" / "embedded"),
+    compile := {
+      val _ = assembly.value
+      (compile in Compile).value
+    },
+    resourceDirectory in Compile := baseDirectory.value / "src" / "main" / "scala" / "org" / "duhemm" / "parsermacro" / "embedded",
     initialCommands in console := """
       import scala.meta._
       import scala.meta.dialects.Scala211
@@ -102,8 +106,7 @@ lazy val sandboxMacros: Project =
   (project in file("sandbox-macros")) settings (
     sharedSettings ++ usePluginSettings: _*
   ) settings (
-    publishArtifact in Compile := false,
-    compile <<= (compile in Compile)
+    publishArtifact in Compile := false
   )
 
 lazy val sandboxClients =
@@ -111,7 +114,10 @@ lazy val sandboxClients =
     sharedSettings ++ usePluginSettings: _*
   ) settings (
     // Always clean before running compile in this subproject
-    compile <<= (compile in Compile) dependsOn clean,
+    compile := {
+      val _ = clean.value
+      (compile in Compile).value
+    },
     scalacOptions ++= Seq("-Ymacro-debug-verbose")
   ) dependsOn sandboxMacros
 
@@ -119,5 +125,5 @@ lazy val tests =
   (project in file("tests")) settings (
     sharedSettings ++ usePluginSettings ++ testSettings: _*
   ) settings (
-    libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _)
+    libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value
   ) dependsOn plugin
