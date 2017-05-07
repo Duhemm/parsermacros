@@ -1,7 +1,10 @@
 language: scala
 
+jdk:
+  - oraclejdk8
+
 scala:
-  - 2.11.6
+  - 2.11.8
 
 script:
   - sbt clean update compile test
