@@ -11,8 +11,8 @@ object ParsermacroPlugin extends AutoPlugin {
   override lazy val projectSettings = Seq(
     resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
     resolvers += Resolver.bintrayRepo("duhemm", "parsermacros"),
-    libraryDependencies += "org.scalameta" % "scalameta_2.11" % "0.1.0-SNAPSHOT",
-    addCompilerPlugin("org.duhemm" % "plugin_2.11" % "0.0.1" intransitive())
+    libraryDependencies += "org.scalameta" % "scalameta_2.11" % "1.7.0",
+    addCompilerPlugin("org.duhemm" % "plugin_2.11" % "0.1.1-SNAPSHOT" intransitive())
   )
 
 }

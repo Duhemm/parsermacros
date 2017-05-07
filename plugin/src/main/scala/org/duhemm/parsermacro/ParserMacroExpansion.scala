@@ -35,12 +35,8 @@ class ExpandParserMacro(val c: Context) extends UniverseUtils
       sys.getOrElse("CLASSPATH", sys.getOrElse("sbt.class.directory", ""))
     val sp: String = "src/"
 
-    // Warning, normally we put
-    // val mirror = scala.meta.Mirror(global)
-    // here
-    val mirror = new scala.meta.internal.scalahost.v1.offline.Mirror(cp, sp)
     val arguments: List[Tokens] = rawArguments.map { string2input }.map { in =>
-      mirror.dialect(in).tokenize.get
+      in.tokenize.get
     }
 
     val typechecked = c.typecheck(originalTree, mode = c.TYPEmode)
