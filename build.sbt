@@ -12,7 +12,7 @@ lazy val sharedSettings: Seq[Setting[_]] = Seq(
   scalaVersion := "2.11.8",
   organization := "org.duhemm",
   resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-  libraryDependencies += "org.scalameta" %% "scalameta" % "1.6.0",
+  libraryDependencies += "org.scalameta" %% "scalameta" % "1.7.0",
   libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
   scalaHome := sys.props get scalaHomeProperty map file
 ) ++ bintraySettings
@@ -64,7 +64,7 @@ lazy val plugin: Project =
     libraryDependencies +=
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided",
     libraryDependencies +=
-      "org.scalameta" % "scalahost" % "1.6.0" cross CrossVersion.full,
+      "org.scalameta" % "scalahost" % "1.7.0" cross CrossVersion.full,
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false, includeDependency = true),
     assemblyJarName in assembly := pluginJarName,
     assemblyMergeStrategy in assembly := {
